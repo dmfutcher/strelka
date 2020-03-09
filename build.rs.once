@@ -1,0 +1,11 @@
+extern crate glob;
+extern crate krpc_mars_terraformer;
+
+fn main() {
+	for path in glob::glob("krpc/*.json").unwrap().filter_map(Result::ok) {
+		println!("cargo:rerun-if-changed={}", path.display());
+	}
+
+	krpc_mars_terraformer::run("krpc/", "src/krpc")
+		.expect("Could not terraform Mars :(");
+}

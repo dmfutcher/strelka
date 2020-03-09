@@ -1,0 +1,6 @@
+This directory is populated by generated code using krpc-mars-terraformer & edited slightly. 
+
+If you are building your own version of the program against a different set of KRPC service definitions, you'll have to
+re-generate this code and fiddle with it until the compiler errors stop.
+
+As I'm already having to maintain a branch of krpc-mars-terraformer, I might just bring it in tree and make it work better.

@@ -10,8 +10,13 @@ mod strelka;
 
 use strelka::launch_controller;
 
-fn main() -> Result<(), failure::Error> {
-    let launch_controller = launch_controller::LaunchController::new()?;
+#[actix_rt::main]
+async fn main() {
 
-    Ok(())
+    match launch_controller::LaunchController::new() {
+        Ok(mut ctl) => ctl.start_launch().await,
+        Err(_) => panic!("Failed to start launch")
+ 
+    };
+
 }

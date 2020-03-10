@@ -1,11 +1,15 @@
 pub mod altitude;
 pub mod command_control;
+pub mod streamer;
 
 use actix::prelude::*;
 use std::collections::HashMap;
+use std::thread;
+use std::time;
 
 use altitude::AltitudeMonitor;
 use command_control::CommandAndControl;
+use streamer::{Streamer, StreamValues};
 use crate::strelka::streams::StreamUpdate;
 
 
@@ -33,13 +37,17 @@ impl Handler<StreamUpdate> for Box<dyn StreamActor> {
 pub struct ActorController {
     actors: Vec<actix::Addr<Box<dyn StreamActor>>>,
     stream_map: HashMap<String, Vec<actix::Addr<Box<dyn StreamActor>>>>,
+    command_actor: actix::Addr<CommandAndControl>,
+    stream_actor: actix::Addr<Streamer>,
 }
 
 impl ActorController {
-    pub fn new() -> Self {
+    pub fn new(krpc_client: krpc_mars::RPCClient, stream_client: krpc_mars::StreamClient) -> Self {
         ActorController{ 
             actors: vec!(),
             stream_map: HashMap::new(),
+            command_actor: CommandAndControl{}.start(),
+            stream_actor: Streamer::new(krpc_client, stream_client).start(),
         }
     }
 
@@ -65,10 +73,20 @@ impl ActorController {
         }
     }
 
+    pub async fn tick(&self) {
+        let result = self.stream_actor.send(StreamValues{}).await;
+        println!("{:?}", result);
+        if let Ok(updated_values) = result {
+            for update in updated_values {
+                self.broadcast(update).await;
+            }
+        }
+
+        thread::sleep(time::Duration::from_secs(1));
+    }
+
     pub async fn start(&mut self) {
-        let candc = CommandAndControl{ };
-        let alt = AltitudeMonitor{ };
-        self.register_actor(Box::new(candc));
+        let alt = AltitudeMonitor{};
         self.register_actor(Box::new(alt));
     
         self.broadcast(StreamUpdate::Altitude(100.0)).await;

@@ -1,27 +1,26 @@
-use actix::prelude::{Actor, Context, Message};
-use crate::strelka::streams::StreamUpdate;
-use crate::strelka::actors::StreamActor;
+use actix::prelude::{Actor, Context, Handler, Message};
 
-pub enum ActorCommand {
-    Abort
+#[derive(Debug)]
+pub enum Command {
+    Stage,
 }
 
-impl Message for ActorCommand {
-    type Result = ();
-}
-
+/// CommandAndControl takes ActorCommands, translates them into kRPC calls and executes those calls.
+/// This should be the only Actor in strelka that emits KRPC calls
 pub struct CommandAndControl {}
 
-impl StreamActor for CommandAndControl {
-    fn request_streams(&self) -> Vec<String> {
-        vec!("Commands".to_owned())
-    }
-
-    fn receive(&self, msg: StreamUpdate) {
-        
-    }
+impl Message for Command {
+    type Result = ();
 }
 
 impl Actor for CommandAndControl {
     type Context = Context<Self>;
+}
+
+impl Handler<Command> for CommandAndControl {
+    type Result = ();
+
+    fn handle(&mut self, command: Command, _: &mut Context<Self>) -> Self::Result {
+        println!("Received command {:?}", command);
+    }
 }

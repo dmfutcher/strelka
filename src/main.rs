@@ -1,20 +1,17 @@
 extern crate krpc_mars;
 extern crate failure;
+extern crate actix;
+extern crate actix_rt;
+extern crate strum;
+extern crate strum_macros;
 
 mod krpc;
+mod strelka;
 
-use krpc::space_center;
+use strelka::launch_controller;
 
 fn main() -> Result<(), failure::Error> {
-    let client = krpc_mars::RPCClient::connect("Example", "127.0.0.1:50000")?;
-
-    let vessel = client.mk_call(&space_center::get_active_vessel())?;
-    println!("Active vessel: {:?}", vessel);
-
-    let control = client.mk_call(&vessel.get_control())?;
-
-    let result = client.mk_call(&control.activate_next_stage())?;
-    println!("{:?}", result);
+    let launch_controller = launch_controller::LaunchController::new()?;
 
     Ok(())
 }

@@ -21,7 +21,7 @@ impl LaunchController {
 
     pub fn new() -> Result<LaunchController, failure::Error> {
         let client = krpc_mars::RPCClient::connect("Example", "127.0.0.1:50000")?;
-        let mut actor_ctl = ActorController::new();
+        let actor_ctl = ActorController::new();
 
         Ok(LaunchController{ 
             client,

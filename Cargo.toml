@@ -9,6 +9,10 @@ edition = "2018"
 [dependencies]
 failure = "0.1"
 krpc_mars = { git = 'https://github.com/Cahu/krpc-mars.git' }
+actix = "0.9"
+actix-rt = "1.0"
+strum = "0.18.0"
+strum_macros = "0.18.0"
 
 [build-dependencies]
 glob = "0.3"

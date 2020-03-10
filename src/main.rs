@@ -5,6 +5,7 @@ extern crate actix_rt;
 extern crate strum;
 extern crate strum_macros;
 
+#[allow(dead_code)]
 mod krpc;
 mod strelka;
 

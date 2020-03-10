@@ -15,7 +15,7 @@ impl StreamActor for AltitudeMonitor {
         vec!("Altitude".to_owned())
     }
 
-    fn receive(&self, msg: StreamUpdate) {
+    fn receive(&mut self, msg: StreamUpdate) {
         match msg {
             StreamUpdate::Altitude(v) => {
                 println!("AltitudeMonitor: {}m", v);

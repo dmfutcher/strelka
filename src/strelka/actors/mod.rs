@@ -1,6 +1,7 @@
 pub mod altitude;
 pub mod command_control;
 pub mod streamer;
+pub mod ignition;
 
 use actix::prelude::*;
 use std::collections::HashMap;
@@ -9,6 +10,7 @@ use std::time;
 
 use altitude::AltitudeMonitor;
 use command_control::CommandAndControl;
+use ignition::IgnitionActor;
 use streamer::{Streamer, StreamValues};
 use crate::strelka::streams::StreamUpdate;
 
@@ -19,7 +21,7 @@ impl Message for StreamUpdate {
 
 pub trait StreamActor {
     fn request_streams(&self) -> Vec<String>;
-    fn receive(&self, msg: StreamUpdate);
+    fn receive(&mut self, msg: StreamUpdate);
 }
 
 impl Actor for Box<dyn StreamActor> {
@@ -46,7 +48,7 @@ impl ActorController {
         ActorController{ 
             actors: vec!(),
             stream_map: HashMap::new(),
-            command_actor: CommandAndControl{}.start(),
+            command_actor: CommandAndControl::new(krpc_client.clone()).start(),
             stream_actor: Streamer::new(krpc_client, stream_client).start(),
         }
     }
@@ -73,9 +75,9 @@ impl ActorController {
         }
     }
 
+    // TODO: All of this stuff should probably live in its own Actor instead of the main thread
     pub async fn tick(&self) {
         let result = self.stream_actor.send(StreamValues{}).await;
-        println!("{:?}", result);
         if let Ok(updated_values) = result {
             for update in updated_values {
                 self.broadcast(update).await;
@@ -86,10 +88,10 @@ impl ActorController {
     }
 
     pub async fn start(&mut self) {
-        let alt = AltitudeMonitor{};
-        self.register_actor(Box::new(alt));
-    
-        self.broadcast(StreamUpdate::Altitude(100.0)).await;
+        self.register_actor(Box::new(AltitudeMonitor{}));
+        self.register_actor(Box::new(IgnitionActor::new(self.command_actor.clone())));
+
+        println!("{:?}", self.stream_map.keys());
     }
     
     pub async fn stop_actors(&self) {

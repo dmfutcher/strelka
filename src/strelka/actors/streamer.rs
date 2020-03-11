@@ -34,8 +34,6 @@ impl Streamer {
         let ut_stream_handle = client.mk_call(&space_center::get_ut().to_stream())?;
         self.handles.insert("ut".to_owned(), Handle::new_f64(ut_stream_handle));
 
-        // TODO: Should find a way to avoid duplicating this in launch_controller ... maybe launch_controller doesn't need this ...
-        //       CommandControl is gonna need this stuff too ..., fetch it all once per tick and share the ref between the two?
         let vessel = client.mk_call(&space_center::get_active_vessel())?;
         let reference_frame = client.mk_call(&vessel.get_reference_frame())?;
         let flight = client.mk_call(&vessel.flight(&reference_frame))?;

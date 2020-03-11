@@ -3,13 +3,13 @@ use actix::prelude::{Actor, Context};
 use crate::strelka::actors::StreamActor;
 use crate::strelka::streams::StreamUpdate;
 
-pub struct AltitudeMonitor {}
+pub struct AltitudeActor {}
 
-impl Actor for AltitudeMonitor {
+impl Actor for AltitudeActor {
     type Context = Context<Self>;
 }
 
-impl StreamActor for AltitudeMonitor {
+impl StreamActor for AltitudeActor {
 
     fn request_streams(&self) -> Vec<String> {
         vec!("Altitude".to_owned())
@@ -18,7 +18,7 @@ impl StreamActor for AltitudeMonitor {
     fn receive(&mut self, msg: StreamUpdate) {
         match msg {
             StreamUpdate::Altitude(v) => {
-                println!("AltitudeMonitor: {}m", v);
+                println!("AltitudeActor: {}m", v);
             },
             _ => {}
         }

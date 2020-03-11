@@ -8,15 +8,15 @@ pub enum Command {
     Stage,
 }
 
-/// CommandAndControl takes ActorCommands, translates them into kRPC calls and executes those calls.
+/// CommandActor takes ActorCommands, translates them into kRPC calls and executes those calls.
 /// This should be the only Actor in strelka that emits KRPC calls
-pub struct CommandAndControl {
+pub struct CommandActor {
     client: RPCClient,
 }
 
-impl CommandAndControl {
+impl CommandActor {
     pub fn new(krpc_client: RPCClient) -> Self {
-        CommandAndControl{ client: krpc_client }
+        CommandActor{ client: krpc_client }
     }
 
     fn handle_cmd__stage(&self)-> Result<(), failure::Error> {
@@ -32,11 +32,11 @@ impl Message for Command {
     type Result = ();
 }
 
-impl Actor for CommandAndControl {
+impl Actor for CommandActor {
     type Context = Context<Self>;
 }
 
-impl Handler<Command> for CommandAndControl {
+impl Handler<Command> for CommandActor {
     type Result = ();
 
     fn handle(&mut self, command: Command, _: &mut Context<Self>) -> Self::Result {

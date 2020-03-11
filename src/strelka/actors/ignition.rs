@@ -1,17 +1,17 @@
 use actix::prelude::{Actor, Addr, Context};
 
 use crate::strelka::actors::StreamActor;
-use crate::strelka::actors::command_control::{Command, CommandAndControl};
+use crate::strelka::actors::command::{Command, CommandActor};
 use crate::strelka::streams::StreamUpdate;
 
 pub struct IgnitionActor {
     countdown_val: i8,
     // TODO: Needs refactored once prototype is proved
-    cnc: Addr<CommandAndControl>,
+    cnc: Addr<CommandActor>,
 }
 
 impl IgnitionActor {
-    pub fn new(cnc: Addr<CommandAndControl>) -> Self {
+    pub fn new(cnc: Addr<CommandActor>) -> Self {
         IgnitionActor{ countdown_val: 10, cnc }
     }
 

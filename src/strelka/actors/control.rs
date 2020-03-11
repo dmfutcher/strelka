@@ -1,51 +1,45 @@
+use actix::prelude::{Actor, Context, Handler, Message};
+use krpc_mars::RPCClient;
+
 use crate::krpc::space_center;
-use crate::strelka::actors::control::{ControlActor, ControlAction};
-use crate::strelka::actors::timer::Timer;
-use crate::strelka::actors::StreamActor;
 
-use actix::{System, Actor};
-
-// pub enum LaunchPhase {
-//     PreIgnition,
-//     Ignition,
-//     InitialClimb,
-//     GravityTurn,
-//     BoostToOrbit,
-//     Circularize
-// }
-
-pub struct LaunchController {
-    client: krpc_mars::RPCClient,
-    stream_client: krpc_mars::StreamClient,
-    abort: bool,
+#[derive(Debug)]
+pub enum ControlAction {
+    Tick,
 }
 
-impl LaunchController {
+/// Controller is the main control Actor in the Strelka system, it organises every other Actor
+pub struct ControlActor {
+    client: RPCClient,
+}
 
-    pub fn new() -> Result<LaunchController, failure::Error> {
-        let client = krpc_mars::RPCClient::connect("Example", "127.0.0.1:50000")?;
-        let stream_client = krpc_mars::StreamClient::connect(&client, "127.0.0.1:50001")?;
-
-        Ok(LaunchController{ 
-            client,
-            stream_client,
-            abort: false,
-        })
-    }
-
-    pub fn start_launch(&mut self) {
-        let sys = System::new("test");
-        let ctl_actor = ControlActor::new(self.client.clone()).start();
-
-        Timer::new(ctl_actor.clone()).start();
-
-        sys.run(); // TODO: Return this result
+impl ControlActor {
+    pub fn new(krpc_client: RPCClient) -> Self {
+        ControlActor {
+            client: krpc_client
+        }
     }
 
 }
 
+impl Message for ControlAction {
+    type Result = ();
+}
 
-/* 
+impl Actor for ControlActor {
+    type Context = Context<Self>;
+}
+
+impl Handler<ControlAction> for ControlActor {
+    type Result = ();
+
+    fn handle(&mut self, act: ControlAction, _: &mut Context<Self>) -> Self::Result {
+        println!("Controller: {:?}", act);
+    }
+}
+
+
+/*
 
     pub fn new(krpc_client: krpc_mars::RPCClient, stream_client: krpc_mars::StreamClient) -> Self {
         ActorController{ 
@@ -99,4 +93,6 @@ impl LaunchController {
     
     pub async fn stop_actors(&self) {
         System::current().stop();
-    }*/
+    }
+
+    */

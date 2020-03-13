@@ -3,6 +3,8 @@ use actix::prelude::*;
 use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
+use  std::boxed::Box;
+use std::any::Any;
 
 use crate::strelka::actors::{StreamActor, StreamUpdate};
 use crate::strelka::actors::command::CommandActor;
@@ -41,7 +43,7 @@ impl ActorController {
         }
     }
 
-    pub async fn broadcast_stream_updates(&self, update: StreamUpdate) {
+    pub async fn broadcast_stream_update(&self, update: StreamUpdate) {
         match self.stream_map.get(&update.to_string()) {
             Some(actors) => {
                 for a in actors {
@@ -54,9 +56,10 @@ impl ActorController {
 
     pub async fn tick(&self) {
         let result = self.stream_actor.send(StreamValues{}).await;
+        println!("{:?}", result);
         if let Ok(updated_values) = result {
             for update in updated_values {
-                self.broadcast_stream_updates(update).await;
+                self.broadcast_stream_update(*update).await;
             }
         }
 

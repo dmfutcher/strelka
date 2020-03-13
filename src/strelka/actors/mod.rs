@@ -11,9 +11,14 @@ impl Message for StreamUpdate {
     type Result = ();
 }
 
+pub enum StreamResponse {
+    Ok,
+    Stop,
+}
+
 pub trait StreamActor {
     fn request_streams(&self) -> Vec<String>;
-    fn receive(&mut self, msg: StreamUpdate);
+    fn receive(&mut self, msg: StreamUpdate) -> StreamResponse;
 }
 
 impl Actor for Box<dyn StreamActor> {
@@ -23,7 +28,10 @@ impl Actor for Box<dyn StreamActor> {
 impl Handler<StreamUpdate> for Box<dyn StreamActor> {
     type Result = ();
 
-    fn handle(&mut self, msg: StreamUpdate, _: &mut Context<Self>) -> Self::Result {
-        (*self).receive(msg);
+    fn handle(&mut self, msg: StreamUpdate, ctx: &mut Context<Self>) -> Self::Result {
+        match (*self).receive(msg) {
+            StreamResponse::Stop => ctx.stop(),
+            _ => {}
+        };
     }
 }

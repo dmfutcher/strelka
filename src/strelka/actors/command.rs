@@ -6,6 +6,7 @@ use crate::krpc::space_center;
 #[derive(Debug)]
 pub enum Command {
     Stage,
+    Pitch(f32),
 }
 
 /// CommandActor takes ActorCommands, translates them into kRPC calls and executes those calls.
@@ -19,10 +20,14 @@ impl CommandActor {
         CommandActor{ client: krpc_client }
     }
 
-    fn handle_cmd__stage(&self)-> Result<(), failure::Error> {
+    fn handle_cmd_stage(&self)-> Result<(), failure::Error> {
         let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
         let control = self.client.mk_call(&vessel.get_control())?;
         self.client.mk_call(&control.activate_next_stage());
+        Ok(())
+    }
+
+    fn handle_cmd_pitch(&self) -> Result<(), failure::Error> {
         Ok(())
     }
 
@@ -41,7 +46,7 @@ impl Handler<Command> for CommandActor {
 
     fn handle(&mut self, command: Command, _: &mut Context<Self>) -> Self::Result {
         match command {
-            Stage => self.handle_cmd__stage(),
+            Stage => self.handle_cmd_stage(),
         };
     }
 }

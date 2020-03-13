@@ -1,45 +1,39 @@
 use actix::prelude::*;
 use krpc_mars::{RPCClient, StreamClient};
-use std::collections::HashMap;
-use std::str::FromStr;
 
 use crate::krpc::space_center;
 use crate::strelka::streams::StreamUpdate;
 
-enum Handle {
-    StreamHandleF64(krpc_mars::StreamHandle<f64>),
-}
-
-impl Handle {
-    fn new_f64(h: krpc_mars::StreamHandle<f64>) -> Self {
-        Handle::StreamHandleF64(h)
-    }
-}
-
 /// Streamer periodically gets polls and fetches values from KRPC streams
 pub struct Streamer {
     stream_client: StreamClient,
-    handles: HashMap<String, Handle>,
+    
+    ut: Option<krpc_mars::StreamHandle<f64>>,
+    alt: Option<krpc_mars::StreamHandle<f64>>,
+    pitch: Option<krpc_mars::StreamHandle<f32>>,
 }
 
 impl Streamer {
     pub fn new(krpc_client: RPCClient, stream_client: StreamClient) -> Self {
-        let mut streamer = Streamer{ stream_client, handles: HashMap::new() };
+        let mut streamer = Streamer{ stream_client, ut: None, alt: None, pitch: None };
         streamer.initialise_streams(krpc_client); // TODO: This is a Result
 
         streamer
     }
 
     fn initialise_streams(&mut self, client: RPCClient) -> Result<(), failure::Error> {
-        let ut_stream_handle = client.mk_call(&space_center::get_ut().to_stream())?;
-        self.handles.insert("ut".to_owned(), Handle::new_f64(ut_stream_handle));
-
+        // TODO: Maybe refactor all these calls. Seems very likely to be repeated all over the codebase without some thought.
         let vessel = client.mk_call(&space_center::get_active_vessel())?;
         let reference_frame = client.mk_call(&vessel.get_reference_frame())?;
         let flight = client.mk_call(&vessel.flight(&reference_frame))?;
 
-        let alt_stream_handle = client.mk_call(&flight.get_mean_altitude().to_stream())?;
-        self.handles.insert("Altitude".to_owned(), Handle::new_f64(alt_stream_handle));
+        let ut_handle = client.mk_call(&space_center::get_ut().to_stream())?;
+        let alt_handle = client.mk_call(&flight.get_mean_altitude().to_stream())?;
+        let pitch_handle = client.mk_call(&flight.get_pitch().to_stream())?;
+
+        self.ut = Some(ut_handle);
+        self.alt = Some(alt_handle);
+        self.pitch = Some(pitch_handle);
 
         Ok(())
     } 
@@ -52,45 +46,41 @@ impl Actor for Streamer {
 pub struct StreamValues;
 
 impl actix::Message for StreamValues {
-    type Result = Vec<StreamUpdate>;
+    type Result = Vec<Box<StreamUpdate>>;
 }
 
 impl Handler<StreamValues> for Streamer {
     type Result = MessageResult<StreamValues>;
 
     fn handle(&mut self, _: StreamValues, _: &mut Context<Self>) -> Self::Result {
-        let mut results = Vec::new();
+        let mut results: Vec<Box<StreamUpdate>> = Vec::new();
+
         let update_result = self.stream_client.recv_update();
-
         if let Ok(update) = update_result {
-            for (name, handle) in &self.handles {
-                let stream_handle = match *handle {
-                    Handle::StreamHandleF64(v) => v
-                };
-
-                let stream_result = update.get_result(&stream_handle);
-                if let Err(_) = stream_result {
-                    continue;
+            // TODO: Probably abstract this out soon, will do for now
+                // Universal time stream
+                if let Some(handle) = self.ut {
+                match update.get_result(&handle) {
+                    Ok(ut) => { results.push(Box::new(StreamUpdate::UniversalTime(ut))); },
+                    Err(_) => {}
                 }
-                let stream_value = stream_result.unwrap();
+            }
 
-                let update_val_create = StreamUpdate::from_str(name);
-                if let Ok(mut update_value) = update_val_create {
-
-                    // TODO: This is utter madness, need to find an alternative
-                    //       would a tuple of (ValueName, ValueValue) make sense?
-                    match update_value {
-                        StreamUpdate::Altitude(ref mut wrapped) => {
-                            *wrapped = stream_value;
-                        },
-                        StreamUpdate::UniversalTime(ref mut wrapped) => {
-                            *wrapped = stream_value;
-                        }
-                    };
-
-                    results.push(update_value);
+            // Altitude stream
+            if let Some(handle) = self.alt {
+                match update.get_result(&handle) {
+                    Ok(altitude) => { results.push(Box::new(StreamUpdate::Altitude(altitude))); },
+                    Err(_) => {}
                 }
-            }    
+            }
+
+            // Pitch stream
+            if let Some(handle) = self.pitch {
+                match update.get_result(&handle) {
+                    Ok(pitch) => { results.push(Box::new(StreamUpdate::Pitch(pitch))); },
+                    Err(_) => {}
+                }
+            }
         }
 
         MessageResult(results)

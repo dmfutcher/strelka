@@ -2,8 +2,6 @@ extern crate krpc_mars;
 extern crate failure;
 extern crate actix;
 extern crate actix_rt;
-extern crate strum;
-extern crate strum_macros;
 
 #[allow(dead_code)]
 mod krpc;

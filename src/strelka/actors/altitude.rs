@@ -1,6 +1,6 @@
 use actix::prelude::{Actor, Context};
 
-use crate::strelka::actors::StreamActor;
+use crate::strelka::actors::{StreamActor, StreamResponse};
 use crate::strelka::streams::StreamUpdate;
 
 pub struct AltitudeActor {}
@@ -15,13 +15,17 @@ impl StreamActor for AltitudeActor {
         vec!("Altitude".to_owned())
     }
 
-    fn receive(&mut self, msg: StreamUpdate) {
+    fn receive(&mut self, msg: StreamUpdate) -> StreamResponse {
         match msg {
             StreamUpdate::Altitude(v) => {
                 println!("AltitudeActor: {}m", v);
+
+
             },
             _ => {}
         }
+
+        StreamResponse::Ok
     }
 }
 

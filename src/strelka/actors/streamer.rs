@@ -2,20 +2,27 @@ use actix::prelude::*;
 use krpc_mars::{RPCClient, StreamClient};
 
 use crate::krpc::space_center;
-use crate::strelka::streams::StreamUpdate;
+use crate::strelka::streams::{StreamUpdate, Vector3};
 
 /// Streamer periodically gets polls and fetches values from KRPC streams
 pub struct Streamer {
+    client: RPCClient,
     stream_client: StreamClient,
     
     ut: Option<krpc_mars::StreamHandle<f64>>,
     alt: Option<krpc_mars::StreamHandle<f64>>,
-    pitch: Option<krpc_mars::StreamHandle<f32>>,
+    direction: Option<krpc_mars::StreamHandle<(f64, f64, f64)>>,
 }
 
 impl Streamer {
     pub fn new(krpc_client: RPCClient, stream_client: StreamClient) -> Self {
-        let mut streamer = Streamer{ stream_client, ut: None, alt: None, pitch: None };
+        let mut streamer = Streamer{ 
+            client:krpc_client.clone(),
+            stream_client,
+            ut: None, 
+            alt: None,
+            direction: None
+        };
         streamer.initialise_streams(krpc_client); // TODO: This is a Result
 
         streamer
@@ -29,11 +36,11 @@ impl Streamer {
 
         let ut_handle = client.mk_call(&space_center::get_ut().to_stream())?;
         let alt_handle = client.mk_call(&flight.get_mean_altitude().to_stream())?;
-        let pitch_handle = client.mk_call(&flight.get_pitch().to_stream())?;
+        let dir_handle = client.mk_call(&flight.get_direction().to_stream())?;
 
         self.ut = Some(ut_handle);
         self.alt = Some(alt_handle);
-        self.pitch = Some(pitch_handle);
+        self.direction = Some(dir_handle);
 
         Ok(())
     } 
@@ -74,10 +81,42 @@ impl Handler<StreamValues> for Streamer {
                 }
             }
 
-            // Pitch stream
-            if let Some(handle) = self.pitch {
+
+            // Direction-based streams
+            if let Some(handle) = self.direction {
                 match update.get_result(&handle) {
-                    Ok(pitch) => { results.push(Box::new(StreamUpdate::Pitch(pitch))); },
+                    Ok(raw_vessel_dir) => {
+                        // Compute the pitch - the angle between the vessels direction and
+                        // the direction in the horizon plane
+
+
+
+                        if let Ok(vessel) = self.client.mk_call(&space_center::get_active_vessel()) {
+                            if let Ok(bodies) = self.client.mk_call(&space_center::get_bodies()) {
+                                if let Some(earth) = bodies.get("Kerbin") {
+                                    if let Ok(ref_plane) = self.client.mk_call(&earth.get_reference_frame()) {
+                                        if let Ok(flight) = self.client.mk_call(&vessel.flight(&ref_plane)) {
+                                            if let Ok(direction) = self.client.mk_call(&flight.get_direction()) {
+                                                let vessel_dir = Vector3::from(direction);
+                                                let horizon = Vector3::new(0.0, vessel_dir.y(), vessel_dir.z());
+                                    
+                                                let pitch_magnitude = vessel_dir.angle_between(&horizon);
+                                                println!("Pitch: {:?}!", pitch_magnitude);
+                                            }
+                                            
+                                            
+                                        }
+                                    }
+
+                                }
+                                   
+                            }
+                        }
+                        // results.push(Box::new(StreamUpdate::Pitch(pitch))); 
+
+
+
+                    },
                     Err(_) => {}
                 }
             }

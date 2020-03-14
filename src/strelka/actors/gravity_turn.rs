@@ -4,28 +4,28 @@ use crate::strelka::actors::{StreamActor, StreamResponse};
 use crate::strelka::actors::command::{Command, CommandActor};
 use crate::strelka::streams::StreamUpdate;
 
-pub struct PitchOverActor {
+pub struct GravityTurnActor {
     cmd: Addr<CommandActor>,
 
     started: bool,
     desired_pitch: f64,
 }
 
-impl Actor for PitchOverActor {
+impl Actor for GravityTurnActor {
     type Context = Context<Self>;
 }
 
-impl PitchOverActor {
+impl GravityTurnActor {
 
     pub fn new(cmd: Addr<CommandActor>) -> Self {
-        PitchOverActor{ cmd, started: false, desired_pitch: 45.0 }
+        GravityTurnActor{ cmd, started: false, desired_pitch: 45.0 }
     }
 
 }
 
-impl StreamActor for PitchOverActor {
+impl StreamActor for GravityTurnActor {
 
-    fn name(&self) -> &'static str { "Pitch-Over" }
+    fn name(&self) -> &'static str { "Gravity Turn" }
 
     fn request_streams(&self) -> Vec<&'static str> {
         vec!("Pitch", "Altitude")
@@ -36,7 +36,7 @@ impl StreamActor for PitchOverActor {
             StreamUpdate::Altitude(altitude) => {
                 if altitude > 250.0 && !self.started {
                     self.started = true;
-                    info!("Pitchover started");
+                    info!("Gravity turn started");
                 }
             },
             StreamUpdate::Pitch(current_pitch) => {
@@ -44,7 +44,7 @@ impl StreamActor for PitchOverActor {
                     let within_low = 0.9 * self.desired_pitch;
                     let within_high = 1.1 * self.desired_pitch;
                     if current_pitch >= within_low && current_pitch <= within_high {
-                        info!("Pitchover finished");
+                        info!("Gravity turn finished");
                         self.cmd.do_send(Command::SetPitch(0.0));
                         return StreamResponse::Stop;
                     }

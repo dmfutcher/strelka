@@ -1,9 +1,9 @@
 pub mod altitude;
 pub mod command;
 pub mod controller;
+pub mod gravity_turn;
 pub mod ignition;
 pub mod streamer;
-pub mod pitch_over;
 
 use actix::prelude::*;
 use crate::strelka::streams::StreamUpdate;

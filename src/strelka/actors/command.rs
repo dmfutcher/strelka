@@ -34,7 +34,8 @@ impl CommandActor {
 
     fn handle_cmd_pitch(&self, val: f32) -> Result<(), failure::Error> {
         self.with_control(|ctl| { 
-            self.client.mk_call(&ctl.set_pitch(val))
+            // XXX: This is a can of worms but what I've been calling "Pitch" seems to be set by the Yaw control ...
+            self.client.mk_call(&ctl.set_yaw(val))
         })
     }
 

@@ -16,14 +16,14 @@ impl StreamActor for AltitudeActor {
     }
 
     fn receive(&mut self, msg: StreamUpdate) -> StreamResponse {
-        match msg {
-            StreamUpdate::Altitude(v) => {
-                println!("AltitudeActor: {}m", v);
-
-
-            },
-            _ => {}
-        }
+        // match msg {
+        //     StreamUpdate::Altitude(altitude) => {
+        //         if altitude > 250 {
+        //             println!("Will")
+        //         }
+        //     },
+        //     _ => {}
+        // }
 
         StreamResponse::Ok
     }

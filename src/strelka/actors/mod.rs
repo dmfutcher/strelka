@@ -3,6 +3,7 @@ pub mod command;
 pub mod controller;
 pub mod ignition;
 pub mod streamer;
+pub mod pitch_over;
 
 use actix::prelude::*;
 use crate::strelka::streams::StreamUpdate;

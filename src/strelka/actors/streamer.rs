@@ -82,7 +82,6 @@ impl Handler<StreamValues> for Streamer {
                 }
             }
 
-
             // Direction-based streams
             if let Some(handle) = self.direction {
                 match update.get_result(&handle) {
@@ -91,10 +90,8 @@ impl Handler<StreamValues> for Streamer {
                         // the direction in the horizon plane
                         let vessel_dir = Vector3::from(raw_dir);
                         let horizon = Vector3::new(0.0, vessel_dir.y(), vessel_dir.z());
-            
-                        // TODO: Do we need to handle negatives explicitly?
-                        // TODO: Pitch value might not be completely correct but it responds to pitch changes
-                        let pitch = vessel_dir.angle_between(&horizon);
+                        let angle = vessel_dir.angle_between(&horizon);
+                        let pitch = if vessel_dir.x() < 0.0 { -angle } else { angle };
                         results.push(Box::new(StreamUpdate::Pitch(pitch))); 
                     },
                     Err(_) => {}

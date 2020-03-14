@@ -27,7 +27,12 @@ impl CommandActor {
         Ok(())
     }
 
-    fn handle_cmd_pitch(&self) -> Result<(), failure::Error> {
+    fn handle_cmd_pitch(&self, val: f32) -> Result<(), failure::Error> {
+        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
+        let control = self.client.mk_call(&vessel.get_control())?; 
+
+        // TODO: Definitely getting to the point we want proper error handling and logging implemented ...
+        self.client.mk_call(&control.set_pitch(val))?;
         Ok(())
     }
 
@@ -46,7 +51,8 @@ impl Handler<Command> for CommandActor {
 
     fn handle(&mut self, command: Command, _: &mut Context<Self>) -> Self::Result {
         match command {
-            Stage => self.handle_cmd_stage(),
+            Command::Stage => self.handle_cmd_stage(),
+            Command::Pitch(pitch_ctl_val) => self.handle_cmd_pitch(pitch_ctl_val),
         };
     }
 }

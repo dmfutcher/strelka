@@ -3,14 +3,14 @@ use actix::prelude::*;
 use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
-use  std::boxed::Box;
-use std::any::Any;
+use std::boxed::Box;
 
 use crate::strelka::actors::{StreamActor, StreamUpdate};
 use crate::strelka::actors::command::CommandActor;
 use crate::strelka::actors::streamer::{Streamer, StreamValues};
 use crate::strelka::actors::altitude::AltitudeActor;
 use crate::strelka::actors::ignition::IgnitionActor;
+use crate::strelka::actors::pitch_over::PitchOverActor;
 
 pub struct ActorController {
     actors: Vec<actix::Addr<Box<dyn StreamActor>>>,
@@ -68,6 +68,7 @@ impl ActorController {
 
     pub async fn start(&mut self) {
         self.register_actor(Box::new(AltitudeActor{}));
+        self.register_actor(Box::new(PitchOverActor::new(self.cmd_actor.clone())));
         self.register_actor(Box::new(IgnitionActor::new(self.cmd_actor.clone())));
     }
     

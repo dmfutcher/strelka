@@ -37,10 +37,10 @@ impl StreamActor for IgnitionActor {
 
     fn receive(&mut self, _: StreamUpdate) -> StreamResponse {
         if self.countdown_val == 10 {
-            // TODO: This should probably live in its own actor
+            info!("Countdown started");
             info!("Enabling flight systems");
-            info!("Start countdown");
-
+            
+            // TODO: This should probably live in its own actor
             self.cmd.do_send(Command::SetRCS(true));
             self.cmd.do_send(Command::SetSAS(true));
             self.cmd.do_send(Command::SetThrottle(100.0));

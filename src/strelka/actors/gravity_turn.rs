@@ -18,14 +18,14 @@ impl Actor for GravityTurnActor {
 impl GravityTurnActor {
 
     pub fn new(cmd: Addr<CommandActor>) -> Self {
-        GravityTurnActor{ cmd, started: false, desired_pitch: 45.0 }
+        GravityTurnActor{ cmd, started: false, desired_pitch: 40.0 }
     }
 
 }
 
 impl StreamActor for GravityTurnActor {
 
-    fn name(&self) -> &'static str { "Gravity Turn" }
+    fn name(&self) -> &'static str { "Gravity turn" }
 
     fn request_streams(&self) -> Vec<&'static str> {
         vec!("Pitch", "Altitude")

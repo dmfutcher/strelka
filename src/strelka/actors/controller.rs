@@ -33,6 +33,8 @@ impl ActorController {
     }
 
     pub fn register_actor(&mut self, actor: Box<dyn StreamActor>) {
+        debug!("Registering actor {}", &actor.name());
+
         let linked_streams = actor.request_streams();
         let address = actor.start();
         self.actors.push(address.clone());
@@ -77,7 +79,7 @@ impl ActorController {
     }
 
     pub async fn start(&mut self) {
-        self.register_actor(Box::new(AltitudeActor{}));
+        self.register_actor(Box::new(AltitudeActor::new()));
         self.register_actor(Box::new(GravityTurnActor::new(self.cmd_actor.clone())));
         self.register_actor(Box::new(IgnitionActor::new(self.cmd_actor.clone())));
     }

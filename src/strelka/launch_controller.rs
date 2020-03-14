@@ -29,6 +29,7 @@ impl LaunchController {
     }
 
     pub async fn start_launch(&mut self) {
+        debug!("Launch starting");
         self.actor_ctl.start().await;
         self.launch_loop().await;
     }

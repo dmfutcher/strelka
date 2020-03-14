@@ -39,13 +39,14 @@ impl Vector3 {
     pub fn y(&self) -> f64 { self.y }
     pub fn z(&self) -> f64 { self.z }
 
-    pub fn cross(&self, v: &Vector3) -> Vector3 {
-        return Vector3::new(
-            self.y * v.z - self.z * v.y,
-            self.z * v.x - self.x * v.z,
-            self.x * v.y - self.y * v.x
-        )
-    }
+    // TODO: Will need this later ...
+    // pub fn cross(&self, v: &Vector3) -> Vector3 {
+    //     return Vector3::new(
+    //         self.y * v.z - self.z * v.y,
+    //         self.z * v.x - self.x * v.z,
+    //         self.x * v.y - self.y * v.x
+    //     )
+    // }
 
     pub fn dot(&self, v: &Vector3) -> f64 {
         return self.x * v.x + self.y * v.y + self.z * v.z;

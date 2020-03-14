@@ -38,7 +38,7 @@ impl ActorController {
         self.actors.push(address.clone());
 
         for stream_name in linked_streams {
-            let addrs = self.stream_map.entry(stream_name).or_insert(vec!());
+            let addrs = self.stream_map.entry(stream_name.to_string()).or_insert(vec!());
             addrs.push(address.clone());
         }
     }
@@ -47,7 +47,16 @@ impl ActorController {
         match self.stream_map.get(&update.to_string()) {
             Some(actors) => {
                 for a in actors {
-                    (*a).send(update).await;
+                    match (*a).send(update).await {
+                        Err(e) => {
+                            if a.connected() {
+                                error!("Stream broadcast failed: Message: {:?}, Err: {:?}", update, e)
+                            }
+
+                            // TODO: Actors should tidy up on stopping .. not essential yet
+                        },
+                        _ => {}
+                    }
                 }
             },
             None => {}
@@ -56,7 +65,8 @@ impl ActorController {
 
     pub async fn tick(&self) {
         let result = self.stream_actor.send(StreamValues{}).await;
-        println!("{:?}", result);
+        trace!("Stream updates: {:?}", result);
+
         if let Ok(updated_values) = result {
             for update in updated_values {
                 self.broadcast_stream_update(*update).await;
@@ -72,8 +82,8 @@ impl ActorController {
         self.register_actor(Box::new(IgnitionActor::new(self.cmd_actor.clone())));
     }
     
-    pub async fn stop_actors(&self) {
-        System::current().stop();
-    }
+    // pub async fn stop_actors(&self) {
+    //     System::current().stop();
+    // }
 
 }

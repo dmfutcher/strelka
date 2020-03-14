@@ -1,7 +1,9 @@
 use actix::prelude::{Actor, Context, Handler, Message};
 use krpc_mars::RPCClient;
+use failure::format_err;
 
 use crate::krpc::space_center;
+use crate::krpc::space_center::Control;
 
 #[derive(Debug)]
 pub enum Command {
@@ -24,43 +26,45 @@ impl CommandActor {
     }
 
     fn handle_cmd_stage(&self)-> Result<(), failure::Error> {
-        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
-        let control = self.client.mk_call(&vessel.get_control())?;
-        self.client.mk_call(&control.activate_next_stage());
-        Ok(())
+        self.with_control(|ctl| { 
+            self.client.mk_call(&ctl.activate_next_stage())?;
+            Ok(())
+        })
     }
 
     fn handle_cmd_pitch(&self, val: f32) -> Result<(), failure::Error> {
-        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
-        let control = self.client.mk_call(&vessel.get_control())?; 
-
-        // TODO: Definitely getting to the point we want proper error handling and logging implemented ...
-        self.client.mk_call(&control.set_pitch(val))?;
-        Ok(())
+        self.with_control(|ctl| { 
+            self.client.mk_call(&ctl.set_pitch(val))
+        })
     }
 
     fn handle_cmd_set_sas(&self, toggle: bool) -> Result<(), failure::Error> {
-        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
-        let control = self.client.mk_call(&vessel.get_control())?; 
-
-        self.client.mk_call(&control.set_sas(toggle));
-        Ok(())
+        self.with_control(|ctl| { 
+            self.client.mk_call(&ctl.set_sas(toggle))
+        })
     }
 
     fn handle_cmd_set_rcs(&self, toggle: bool) -> Result<(), failure::Error> {
-        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
-        let control = self.client.mk_call(&vessel.get_control())?; 
-
-        self.client.mk_call(&control.set_rcs(toggle));
-        Ok(())
+        self.with_control(|ctl| { 
+            self.client.mk_call(&ctl.set_rcs(toggle))
+        })
     }
 
     fn handle_cmd_set_throttle(&self, throttle: f32) -> Result<(), failure::Error> {
+        self.with_control(|ctl| { 
+            self.client.mk_call(&ctl.set_throttle(throttle))
+        })
+    }
+
+    // Get the controls struct, unwrap it safely, then run the given function with the controls struct,
+    // avoiding duplicated krpc boilerplate wherever possible.
+    fn with_control<F>(&self, f: F) -> Result<(), failure::Error>
+        where F: Fn(&Control) -> Result<(), krpc_mars::error::Error>
+    {
         let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
         let control = self.client.mk_call(&vessel.get_control())?; 
 
-        self.client.mk_call(&control.set_throttle(throttle));
-        Ok(())
+        f(&control).map_err(|e| format_err!("Command failed: {}", e))
     }
 
 }
@@ -77,12 +81,18 @@ impl Handler<Command> for CommandActor {
     type Result = ();
 
     fn handle(&mut self, command: Command, _: &mut Context<Self>) -> Self::Result {
-        match command {
+        debug!("Executing {:?}", command);
+        let result = match command {
             Command::Stage => self.handle_cmd_stage(),
             Command::SetPitch(pitch_ctl_val) => self.handle_cmd_pitch(pitch_ctl_val),
             Command::SetSAS(toggle) => self.handle_cmd_set_sas(toggle),
             Command::SetRCS(toggle) => self.handle_cmd_set_rcs(toggle),
             Command::SetThrottle(throttle_val) => self.handle_cmd_set_throttle(throttle_val)
         };
+
+        if let Err(e) = result {
+            error!("Executing command {:?} failed: {}", command, e);
+        }
     }
+
 }

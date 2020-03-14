@@ -24,7 +24,10 @@ impl Streamer {
             direction: None
         };
 
-        streamer.initialise_streams(); // TODO: This is a Result
+        if let Err(e) = streamer.initialise_streams() {
+            error!("Initialising streams failed: {}", e);
+        }
+
         streamer
     }
 
@@ -32,7 +35,7 @@ impl Streamer {
         // TODO: Maybe refactor all these calls. Seems very likely to be repeated all over the codebase without some thought.
         let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
         let bodies = self.client.mk_call(&space_center::get_bodies())?;
-        let kerbin_ref = self.client.mk_call(&bodies.get("Kerbin").unwrap().get_reference_frame())?;
+        let kerbin_ref = self.client.mk_call(&bodies.get("Kerbin").unwrap().get_reference_frame())?; // TODO: Temporary hard-code to Kerbin
         let flight = self.client.mk_call(&vessel.flight(&kerbin_ref))?;
 
         let ut_handle = self.client.mk_call(&space_center::get_ut().to_stream())?;
@@ -66,8 +69,8 @@ impl Handler<StreamValues> for Streamer {
         let update_result = self.stream_client.recv_update();
         if let Ok(update) = update_result {
             // TODO: Probably abstract this out soon, will do for now
-                // Universal time stream
-                if let Some(handle) = self.ut {
+            // Universal time stream
+            if let Some(handle) = self.ut {
                 match update.get_result(&handle) {
                     Ok(ut) => { results.push(Box::new(StreamUpdate::UniversalTime(ut))); },
                     Err(_) => {}

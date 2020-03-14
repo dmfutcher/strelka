@@ -11,20 +11,14 @@ impl Actor for AltitudeActor {
 
 impl StreamActor for AltitudeActor {
 
-    fn request_streams(&self) -> Vec<String> {
-        vec!("Altitude".to_owned())
+    fn name(&self) -> &'static str { "Altitude" }
+
+    fn request_streams(&self) -> Vec<&'static str> {
+        vec!("Altitude")
     }
 
-    fn receive(&mut self, msg: StreamUpdate) -> StreamResponse {
-        // match msg {
-        //     StreamUpdate::Altitude(altitude) => {
-        //         if altitude > 250 {
-        //             println!("Will")
-        //         }
-        //     },
-        //     _ => {}
-        // }
-
+    fn receive(&mut self, _: StreamUpdate) -> StreamResponse {
+        // TODO: Currently does nothing
         StreamResponse::Ok
     }
 }

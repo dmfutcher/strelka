@@ -16,7 +16,7 @@ impl IgnitionActor {
     }
 
     fn ignite(&self) {
-        println!("Ignition!");
+        info!("Ignition sequence start!");
         self.cmd.do_send(Command::Stage);
     }
 }
@@ -27,20 +27,28 @@ impl Actor for IgnitionActor {
 
 impl StreamActor for IgnitionActor {
 
-    fn request_streams(&self) -> Vec<String> {
+    fn name(&self) -> &'static str { "Ignition" }
+
+    fn request_streams(&self) -> Vec<&'static str> {
         // Subscribe to UniversalTime so receive() will be called at 60hz, even though we don't use the value ...
         // TODO: Timer based actors?
-        vec!("UniversalTime".to_owned())
+        vec!("UniversalTime")
     }
 
     fn receive(&mut self, _: StreamUpdate) -> StreamResponse {
-        if self.countdown_val > 0 {
-            println!("{}", self.countdown_val);
-            self.countdown_val -= 1;
+        if self.countdown_val == 10 {
+            // TODO: This should probably live in its own actor
+            info!("Enabling flight systems");
+            info!("Start countdown");
 
             self.cmd.do_send(Command::SetRCS(true));
             self.cmd.do_send(Command::SetSAS(true));
             self.cmd.do_send(Command::SetThrottle(100.0));
+        } 
+        
+        if self.countdown_val > 0 {
+            info!("{}", self.countdown_val);
+            self.countdown_val -= 1;
         } else if self.countdown_val == 0 {
             self.ignite();
             self.countdown_val -= 1;
@@ -50,4 +58,3 @@ impl StreamActor for IgnitionActor {
         return StreamResponse::Ok;
     }
 }
-

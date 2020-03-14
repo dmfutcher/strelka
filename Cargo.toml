@@ -7,10 +7,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-failure = "0.1"
-krpc_mars = { git = 'https://github.com/Cahu/krpc-mars.git' }
 actix = "0.9"
 actix-rt = "1.0"
+failure = "0.1"
+krpc_mars = { git = 'https://github.com/Cahu/krpc-mars.git' }
+log = "0.4"
+pretty_env_logger = "0.3"
 
 [build-dependencies]
 glob = "0.3"

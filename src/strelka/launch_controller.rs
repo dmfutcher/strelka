@@ -1,13 +1,14 @@
 use crate::strelka::actors::controller::ActorController;
 
-pub enum LaunchPhase {
-    PreIgnition,
-    Ignition,
-    InitialClimb,
-    GravityTurn,
-    BoostToOrbit,
-    Circularize
-}
+// TODO: Currently un-used ... might use it later
+// pub enum LaunchPhase {
+//     PreIgnition,
+//     Ignition,
+//     InitialClimb,
+//     GravityTurn,
+//     BoostToOrbit,
+//     Circularize
+// }
 
 pub struct LaunchController {
     abort: bool,

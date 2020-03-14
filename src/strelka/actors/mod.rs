@@ -18,7 +18,8 @@ pub enum StreamResponse {
 }
 
 pub trait StreamActor {
-    fn request_streams(&self) -> Vec<String>;
+    fn name(&self) -> &'static str;
+    fn request_streams(&self) -> Vec<&'static str>;
     fn receive(&mut self, msg: StreamUpdate) -> StreamResponse;
 }
 
@@ -31,7 +32,10 @@ impl Handler<StreamUpdate> for Box<dyn StreamActor> {
 
     fn handle(&mut self, msg: StreamUpdate, ctx: &mut Context<Self>) -> Self::Result {
         match (*self).receive(msg) {
-            StreamResponse::Stop => ctx.stop(),
+            StreamResponse::Stop => {
+                info!("{} program complete", self.name());
+                ctx.stop();
+            },
             _ => {}
         };
     }

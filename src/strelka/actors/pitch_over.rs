@@ -25,8 +25,10 @@ impl PitchOverActor {
 
 impl StreamActor for PitchOverActor {
 
-    fn request_streams(&self) -> Vec<String> {
-        vec!("Pitch".to_owned(), "Altitude".to_owned()) // Tick at 60hz
+    fn name(&self) -> &'static str { "Pitch-Over" }
+
+    fn request_streams(&self) -> Vec<&'static str> {
+        vec!("Pitch", "Altitude")
     }
 
     fn receive(&mut self, update: StreamUpdate) -> StreamResponse {
@@ -34,24 +36,24 @@ impl StreamActor for PitchOverActor {
             StreamUpdate::Altitude(altitude) => {
                 if altitude > 250.0 && !self.started {
                     self.started = true;
-                    println!("Pitchover started");
+                    info!("Pitchover started");
                 }
             },
             StreamUpdate::Pitch(current_pitch) => {
                 if self.started {
-                    let withinLow = 0.9 * self.desired_pitch;
-                    let withinHigh = 1.1 * self.desired_pitch;
-                    if current_pitch >= withinLow && current_pitch <= withinHigh {
-                        println!("Pitchover finished");
+                    let within_low = 0.9 * self.desired_pitch;
+                    let within_high = 1.1 * self.desired_pitch;
+                    if current_pitch >= within_low && current_pitch <= within_high {
+                        info!("Pitchover finished");
                         self.cmd.do_send(Command::SetPitch(0.0));
                         return StreamResponse::Stop;
                     }
         
                     // TODO: Implement gradual pitch control level increasing over time to reduce RUD changes
                     if current_pitch < self.desired_pitch {
-                        self.cmd.do_send(Command::SetPitch(0.5));
+                        self.cmd.do_send(Command::SetPitch(1.0));
                     } else if current_pitch > self.desired_pitch {
-                        self.cmd.do_send(Command::SetPitch(-0.5));
+                        self.cmd.do_send(Command::SetPitch(-1.0));
                     }
                 }
             },

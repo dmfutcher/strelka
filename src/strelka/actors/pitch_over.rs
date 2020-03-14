@@ -43,15 +43,15 @@ impl StreamActor for PitchOverActor {
                     let withinHigh = 1.1 * self.desired_pitch;
                     if current_pitch >= withinLow && current_pitch <= withinHigh {
                         println!("Pitchover finished");
-                        self.cmd.do_send(Command::Pitch(0.0));
+                        self.cmd.do_send(Command::SetPitch(0.0));
                         return StreamResponse::Stop;
                     }
         
                     // TODO: Implement gradual pitch control level increasing over time to reduce RUD changes
                     if current_pitch < self.desired_pitch {
-                        self.cmd.do_send(Command::Pitch(0.5));
+                        self.cmd.do_send(Command::SetPitch(0.5));
                     } else if current_pitch > self.desired_pitch {
-                        self.cmd.do_send(Command::Pitch(-0.5));
+                        self.cmd.do_send(Command::SetPitch(-0.5));
                     }
                 }
             },

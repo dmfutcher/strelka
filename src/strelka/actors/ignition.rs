@@ -37,6 +37,10 @@ impl StreamActor for IgnitionActor {
         if self.countdown_val > 0 {
             println!("{}", self.countdown_val);
             self.countdown_val -= 1;
+
+            self.cmd.do_send(Command::SetRCS(true));
+            self.cmd.do_send(Command::SetSAS(true));
+            self.cmd.do_send(Command::SetThrottle(100.0));
         } else if self.countdown_val == 0 {
             self.ignite();
             self.countdown_val -= 1;

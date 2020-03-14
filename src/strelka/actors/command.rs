@@ -6,7 +6,10 @@ use crate::krpc::space_center;
 #[derive(Debug)]
 pub enum Command {
     Stage,
-    Pitch(f32),
+    SetPitch(f32),
+    SetSAS(bool),
+    SetRCS(bool),
+    SetThrottle(f32),
 }
 
 /// CommandActor takes ActorCommands, translates them into kRPC calls and executes those calls.
@@ -36,6 +39,30 @@ impl CommandActor {
         Ok(())
     }
 
+    fn handle_cmd_set_sas(&self, toggle: bool) -> Result<(), failure::Error> {
+        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
+        let control = self.client.mk_call(&vessel.get_control())?; 
+
+        self.client.mk_call(&control.set_sas(toggle));
+        Ok(())
+    }
+
+    fn handle_cmd_set_rcs(&self, toggle: bool) -> Result<(), failure::Error> {
+        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
+        let control = self.client.mk_call(&vessel.get_control())?; 
+
+        self.client.mk_call(&control.set_rcs(toggle));
+        Ok(())
+    }
+
+    fn handle_cmd_set_throttle(&self, throttle: f32) -> Result<(), failure::Error> {
+        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
+        let control = self.client.mk_call(&vessel.get_control())?; 
+
+        self.client.mk_call(&control.set_throttle(throttle));
+        Ok(())
+    }
+
 }
 
 impl Message for Command {
@@ -52,7 +79,10 @@ impl Handler<Command> for CommandActor {
     fn handle(&mut self, command: Command, _: &mut Context<Self>) -> Self::Result {
         match command {
             Command::Stage => self.handle_cmd_stage(),
-            Command::Pitch(pitch_ctl_val) => self.handle_cmd_pitch(pitch_ctl_val),
+            Command::SetPitch(pitch_ctl_val) => self.handle_cmd_pitch(pitch_ctl_val),
+            Command::SetSAS(toggle) => self.handle_cmd_set_sas(toggle),
+            Command::SetRCS(toggle) => self.handle_cmd_set_rcs(toggle),
+            Command::SetThrottle(throttle_val) => self.handle_cmd_set_throttle(throttle_val)
         };
     }
 }

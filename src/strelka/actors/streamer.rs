@@ -23,20 +23,21 @@ impl Streamer {
             alt: None,
             direction: None
         };
-        streamer.initialise_streams(krpc_client); // TODO: This is a Result
 
+        streamer.initialise_streams(); // TODO: This is a Result
         streamer
     }
 
-    fn initialise_streams(&mut self, client: RPCClient) -> Result<(), failure::Error> {
+    fn initialise_streams(&mut self) -> Result<(), failure::Error> {
         // TODO: Maybe refactor all these calls. Seems very likely to be repeated all over the codebase without some thought.
-        let vessel = client.mk_call(&space_center::get_active_vessel())?;
-        let reference_frame = client.mk_call(&vessel.get_reference_frame())?;
-        let flight = client.mk_call(&vessel.flight(&reference_frame))?;
+        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
+        let bodies = self.client.mk_call(&space_center::get_bodies())?;
+        let kerbin_ref = self.client.mk_call(&bodies.get("Kerbin").unwrap().get_reference_frame())?;
+        let flight = self.client.mk_call(&vessel.flight(&kerbin_ref))?;
 
-        let ut_handle = client.mk_call(&space_center::get_ut().to_stream())?;
-        let alt_handle = client.mk_call(&flight.get_mean_altitude().to_stream())?;
-        let dir_handle = client.mk_call(&flight.get_direction().to_stream())?;
+        let ut_handle = self.client.mk_call(&space_center::get_ut().to_stream())?;
+        let alt_handle = self.client.mk_call(&flight.get_mean_altitude().to_stream())?;
+        let dir_handle = self.client.mk_call(&flight.get_direction().to_stream())?;
 
         self.ut = Some(ut_handle);
         self.alt = Some(alt_handle);
@@ -85,37 +86,16 @@ impl Handler<StreamValues> for Streamer {
             // Direction-based streams
             if let Some(handle) = self.direction {
                 match update.get_result(&handle) {
-                    Ok(raw_vessel_dir) => {
+                    Ok(raw_dir) => {
                         // Compute the pitch - the angle between the vessels direction and
                         // the direction in the horizon plane
-
-
-
-                        if let Ok(vessel) = self.client.mk_call(&space_center::get_active_vessel()) {
-                            if let Ok(bodies) = self.client.mk_call(&space_center::get_bodies()) {
-                                if let Some(earth) = bodies.get("Kerbin") {
-                                    if let Ok(ref_plane) = self.client.mk_call(&earth.get_reference_frame()) {
-                                        if let Ok(flight) = self.client.mk_call(&vessel.flight(&ref_plane)) {
-                                            if let Ok(direction) = self.client.mk_call(&flight.get_direction()) {
-                                                let vessel_dir = Vector3::from(direction);
-                                                let horizon = Vector3::new(0.0, vessel_dir.y(), vessel_dir.z());
-                                    
-                                                let pitch_magnitude = vessel_dir.angle_between(&horizon);
-                                                println!("Pitch: {:?}!", pitch_magnitude);
-                                            }
-                                            
-                                            
-                                        }
-                                    }
-
-                                }
-                                   
-                            }
-                        }
-                        // results.push(Box::new(StreamUpdate::Pitch(pitch))); 
-
-
-
+                        let vessel_dir = Vector3::from(raw_dir);
+                        let horizon = Vector3::new(0.0, vessel_dir.y(), vessel_dir.z());
+            
+                        // TODO: Do we need to handle negatives explicitly?
+                        // TODO: Pitch value might not be completely correct but it responds to pitch changes
+                        let pitch = vessel_dir.angle_between(&horizon);
+                        results.push(Box::new(StreamUpdate::Pitch(pitch))); 
                     },
                     Err(_) => {}
                 }

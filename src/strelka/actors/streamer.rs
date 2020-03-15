@@ -12,7 +12,6 @@ pub struct Streamer {
     ut: Option<krpc_mars::StreamHandle<f64>>,
     alt: Option<krpc_mars::StreamHandle<f64>>,
     direction: Option<krpc_mars::StreamHandle<(f64, f64, f64)>>,
-    apoapsis: Option<krpc_mars::StreamHandle<f64>>,
 }
 
 impl Streamer {
@@ -23,7 +22,6 @@ impl Streamer {
             ut: None, 
             alt: None,
             direction: None,
-            apoapsis: None,
         };
 
         if let Err(e) = streamer.initialise_streams() {
@@ -39,20 +37,25 @@ impl Streamer {
         let bodies = self.client.mk_call(&space_center::get_bodies())?;
         let kerbin_ref = self.client.mk_call(&bodies.get("Kerbin").unwrap().get_reference_frame())?; // TODO: Temporary hard-code to Kerbin
         let flight = self.client.mk_call(&vessel.flight(&kerbin_ref))?;
-        let orbit = self.client.mk_call(&vessel.get_orbit())?;
 
         let ut_handle = self.client.mk_call(&space_center::get_ut().to_stream())?;
         let alt_handle = self.client.mk_call(&flight.get_mean_altitude().to_stream())?;
         let dir_handle = self.client.mk_call(&flight.get_direction().to_stream())?;
-        let apo_handle = self.client.mk_call(&orbit.get_apoapsis_altitude().to_stream())?;
 
         self.ut = Some(ut_handle);
         self.alt = Some(alt_handle);
         self.direction = Some(dir_handle);
-        self.apoapsis = Some(apo_handle);
 
         Ok(())
     } 
+
+    fn get_apoapsis_altitude(&self) -> Result<f64, failure::Error> {
+        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
+        let orbit = self.client.mk_call(&vessel.get_orbit())?;
+        let apo_altitude = self.client.mk_call(&orbit.get_apoapsis_altitude())?;
+ 
+        Ok(apo_altitude)
+    }
 }
 
 impl Actor for Streamer {
@@ -78,7 +81,7 @@ impl Handler<StreamValues> for Streamer {
             if let Some(handle) = self.ut {
                 match update.get_result(&handle) {
                     Ok(ut) => { results.push(Box::new(StreamUpdate::UniversalTime(ut))); },
-                    Err(_) => {}
+                    Err(e) => { trace!("Failed to get ut stream update: {}", e)}
                 }
             }
 
@@ -86,7 +89,7 @@ impl Handler<StreamValues> for Streamer {
             if let Some(handle) = self.alt {
                 match update.get_result(&handle) {
                     Ok(altitude) => { results.push(Box::new(StreamUpdate::Altitude(altitude))); },
-                    Err(_) => {}
+                    Err(e) => { trace!("Failed to get altitude stream update: {}", e)}
                 }
             }
 
@@ -102,16 +105,15 @@ impl Handler<StreamValues> for Streamer {
                         let pitch = if vessel_dir.x() < 0.0 { -angle } else { angle };
                         results.push(Box::new(StreamUpdate::Pitch(pitch))); 
                     },
-                    Err(_) => {}
+                    Err(e) => { trace!("Failed to get pitch stream update: {}", e)}
                 }
             }
 
             // Apoapsis stream
-            if let Some(handle) = self.apoapsis {
-                match update.get_result(&handle) {
-                    Ok(apo) => { results.push(Box::new(StreamUpdate::Apoapsis(apo))); },
-                    Err(_) => {}
-                }
+            // KRPC does not like if we try to stream apo altitude the same way as all the other values. After the first
+            // successful request, all subsequent stream value requests fail. So get it manually!
+            if let Ok(apo_alt) = self.get_apoapsis_altitude() {
+                results.push(Box::new(StreamUpdate::Apoapsis(apo_alt)));
             }
         }
 

@@ -11,6 +11,7 @@ use crate::strelka::actors::streamer::{Streamer, StreamValues};
 use crate::strelka::actors::altitude::AltitudeActor;
 use crate::strelka::actors::ignition::IgnitionActor;
 use crate::strelka::actors::gravity_turn::GravityTurnActor;
+use crate::strelka::actors::burn_to_apo::BurnToApoActor;
 
 pub struct ActorController {
     actors: Vec<actix::Addr<Box<dyn StreamActor>>>,
@@ -82,6 +83,12 @@ impl ActorController {
         self.register_actor(Box::new(AltitudeActor::new()));
         self.register_actor(Box::new(GravityTurnActor::new(self.cmd_actor.clone())));
         self.register_actor(Box::new(IgnitionActor::new(self.cmd_actor.clone())));
+
+        // TODO: Very soon going to want the ability for actors to spawn new actors
+        // This one can run fine from the start, but it doesn't need to and that increases
+        // the number of concurrent moving parts and more surface area for actors to 
+        // interact and break in ways you don't expect.
+        self.register_actor(Box::new(BurnToApoActor::new(self.cmd_actor.clone())));
     }
     
     // pub async fn stop_actors(&self) {

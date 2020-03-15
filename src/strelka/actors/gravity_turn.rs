@@ -51,9 +51,9 @@ impl StreamActor for GravityTurnActor {
         
                     // TODO: Implement gradual pitch control level increasing over time to reduce chance of losing control
                     if current_pitch < self.desired_pitch {
-                        self.cmd.do_send(Command::SetPitch(0.6));
+                        self.cmd.do_send(Command::SetPitch(0.8));
                     } else if current_pitch > self.desired_pitch {
-                        self.cmd.do_send(Command::SetPitch(0.6));
+                        self.cmd.do_send(Command::SetPitch(0.8));
                     }
                 }
             },

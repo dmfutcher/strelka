@@ -4,56 +4,41 @@ use crate::strelka::actors::{StreamActor, StreamResponse};
 use crate::strelka::actors::command::{Command, CommandActor};
 use crate::strelka::streams::StreamUpdate;
 
-pub struct GravityTurnActor {
+pub struct BurnToApoActor {
     cmd: Addr<CommandActor>,
 
-    started: bool,
-    desired_pitch: f64,
+    target_apo_alt: f64,
 }
 
-impl Actor for GravityTurnActor {
+impl Actor for BurnToApoActor {
     type Context = Context<Self>;
 }
 
-impl GravityTurnActor {
+impl BurnToApoActor {
 
     pub fn new(cmd: Addr<CommandActor>) -> Self {
-        GravityTurnActor{ cmd, started: false, desired_pitch: 50.0 }
+        BurnToApoActor{ cmd, target_apo_alt: 75_000.0 }
     }
 
 }
 
-impl StreamActor for GravityTurnActor {
+impl StreamActor for BurnToApoActor {
 
-    fn name(&self) -> &'static str { "Gravity turn" }
+    fn name(&self) -> &'static str { "Burn to apoapsis" }
 
     fn request_streams(&self) -> Vec<&'static str> {
-        vec!("Altitude")
+        vec!("Apoapsis")
     }
 
     fn receive(&mut self, update: StreamUpdate) -> StreamResponse {
         match update {
-            StreamUpdate::Altitude(altitude) => {
-                if altitude > 250.0 && !self.started {
-                    self.started = true;
-                    info!("Gravity turn started");
-                }
-            },
-            StreamUpdate::Pitch(current_pitch) => {
-                if self.started {
-                    let within_low = 0.9 * self.desired_pitch;
-                    let within_high = 1.1 * self.desired_pitch;
-                    if current_pitch >= within_low && current_pitch <= within_high {
-                        self.cmd.do_send(Command::SetPitch(0.0));
-                        return StreamResponse::Stop;
-                    }
-        
-                    // TODO: Implement gradual pitch control level increasing over time to reduce chance of losing control
-                    if current_pitch < self.desired_pitch {
-                        self.cmd.do_send(Command::SetPitch(0.6));
-                    } else if current_pitch > self.desired_pitch {
-                        self.cmd.do_send(Command::SetPitch(0.6));
-                    }
+            StreamUpdate::Apoapsis(apo) => {
+                if apo >= self.target_apo_alt {
+                    info!("Apoapsis at target altitude");
+                    self.cmd.do_send(Command::SetThrottle(0.0));
+                    info!("MECO confirmed");
+
+                    // TODO: Start working out circularisation burn
                 }
             },
             _ => {}

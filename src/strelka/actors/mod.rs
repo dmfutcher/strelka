@@ -1,5 +1,6 @@
 pub mod altitude;
 pub mod burn_to_apo;
+pub mod circularisation_burn;
 pub mod command;
 pub mod controller;
 pub mod gravity_turn;

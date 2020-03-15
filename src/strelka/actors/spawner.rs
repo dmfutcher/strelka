@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::strelka::actors::{StreamActor};
 
+// StreamAddrs is shared between this actor and the ActorController
 pub type StreamAddrs = Arc<Mutex<HashMap<String, Vec<Addr<Box<dyn StreamActor>>>>>>;
 
 pub struct Spawner {
@@ -15,7 +16,6 @@ pub enum SpawnerCommand {
 }
 
 impl Spawner {
-
     pub fn new(stream_addrs: StreamAddrs) -> Self {
         Spawner{
             stream_addrs,

@@ -76,7 +76,7 @@ impl ActorController {
         // TODO: We'll want to make this sleep smaller so we can react faster to streams.
         //       However the countdown relies on ticks being a second, so we need the timer
         //       actor infx to work before we can do this. 
-        thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_millis(250));
     }
 
     pub async fn start(&mut self) {

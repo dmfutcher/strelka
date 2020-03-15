@@ -27,7 +27,7 @@ impl GravityTurnActor {
             spawn,
             started: false, 
             finished: false,
-            desired_pitch: 50.0
+            desired_pitch: 55.0
         }
     }
 
@@ -42,10 +42,6 @@ impl StreamActor for GravityTurnActor {
     }
 
     fn receive(&mut self, update: StreamUpdate) -> StreamResponse {
-        if self.finished {
-            return StreamResponse::Stop;
-        }
-
         match update {
             StreamUpdate::Altitude(altitude) => {
                 if altitude > 250.0 && !self.started {
@@ -67,14 +63,16 @@ impl StreamActor for GravityTurnActor {
                         self.cmd.do_send(Command::SetPitch(0.0));
 
                         // Spawn the BurnToApo actor and stop our own actor
-                        self.spawn.do_send(SpawnerCommand::Spawn(Box::new(BurnToApoActor::new(self.cmd.clone()))));
+                        self.spawn.do_send(SpawnerCommand::Spawn(Box::new(BurnToApoActor::new(self.cmd.clone(), self.spawn.clone()))));
+                        return StreamResponse::Stop;
                     }
         
                     // TODO: Implement gradual pitch control level increasing over time to reduce chance of losing control
+                    // TODO: ^^ will also be useful as we have to tweak these values for different launch vehicles
                     if current_pitch < self.desired_pitch {
-                        self.cmd.do_send(Command::SetPitch(0.8));
+                        self.cmd.do_send(Command::SetPitch(1.0));
                     } else if current_pitch > self.desired_pitch {
-                        self.cmd.do_send(Command::SetPitch(0.8));
+                        self.cmd.do_send(Command::SetPitch(1.0));
                     }
                 }
             },

@@ -18,7 +18,7 @@ pub struct LaunchController {
 impl LaunchController {
 
     pub fn new() -> Result<LaunchController, failure::Error> {
-        let client = krpc_mars::RPCClient::connect("Example", "127.0.0.1:50000")?;
+        let client = krpc_mars::RPCClient::connect("Strelka", "127.0.0.1:50000")?;
         let stream_client = krpc_mars::StreamClient::connect(&client, "127.0.0.1:50001")?;
         let actor_ctl = ActorController::new(client.clone(), stream_client.clone());
 

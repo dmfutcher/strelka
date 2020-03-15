@@ -2,10 +2,13 @@ use actix::prelude::{Actor, Addr, Context};
 
 use crate::strelka::actors::{StreamActor, StreamResponse};
 use crate::strelka::actors::command::{Command, CommandActor};
+use crate::strelka::actors::spawner::{Spawner, SpawnerCommand};
+use crate::strelka::actors::circularisation_burn::CircularisationBurnActor;
 use crate::strelka::streams::StreamUpdate;
 
 pub struct BurnToApoActor {
     cmd: Addr<CommandActor>,
+    spawn: Addr<Spawner>,
 
     target_apo_alt: f64,
 }
@@ -16,8 +19,12 @@ impl Actor for BurnToApoActor {
 
 impl BurnToApoActor {
 
-    pub fn new(cmd: Addr<CommandActor>) -> Self {
-        BurnToApoActor{ cmd, target_apo_alt: 75_000.0 }
+    pub fn new(cmd: Addr<CommandActor>, spawn: Addr<Spawner>) -> Self {
+        BurnToApoActor{ 
+            cmd, 
+            spawn,
+            target_apo_alt: 75_000.0 
+        }
     }
 
 }
@@ -42,7 +49,7 @@ impl StreamActor for BurnToApoActor {
                     self.cmd.do_send(Command::SetThrottle(0.0));
                     info!("MECO confirmed");
 
-                    // TODO: Launch circularisation burn handler
+                    self.spawn.do_send(SpawnerCommand::Spawn(Box::new(CircularisationBurnActor::new(self.cmd.clone()))));
                     return StreamResponse::Stop;
                 }
             },

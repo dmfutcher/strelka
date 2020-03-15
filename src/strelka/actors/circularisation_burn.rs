@@ -33,7 +33,7 @@ impl StreamActor for CircularisationBurnActor {
     fn name(&self) -> &'static str { "Circularisation Burn" }
 
     fn request_streams(&self) -> Vec<&'static str> {
-        vec!("Apoapsis")
+        vec!("TimeToApoapsis")
     }
 
     fn receive(&mut self, update: StreamUpdate) -> StreamResponse {

@@ -25,7 +25,7 @@ impl GravityTurnActor {
 
 impl StreamActor for GravityTurnActor {
 
-    fn name(&self) -> &'static str { "Gravity turn" }
+    fn name(&self) -> &'static str { "GravityTurn" }
 
     fn request_streams(&self) -> Vec<&'static str> {
         vec!("Pitch", "Altitude")
@@ -39,6 +39,9 @@ impl StreamActor for GravityTurnActor {
                     info!("Gravity turn started");
                 }
             },
+            // TODO: Do we want to base this off prograde vector pitch rather than vessel pitch?
+            // TODO: Should we avoid any pitch commands when going trans-sonic? OR more generally when turning
+            //          is more likely to lose control (atmospheric drag)
             StreamUpdate::Pitch(current_pitch) => {
                 if self.started {
                     let within_low = 0.9 * self.desired_pitch;

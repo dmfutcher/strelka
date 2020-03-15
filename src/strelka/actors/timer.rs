@@ -28,7 +28,6 @@ impl Timer {
 impl Actor for Timer {
     type Context = Context<Self>;
 
-    // stop system after `self.dur` seconds
     fn started(&mut self, ctx: &mut Context<Self>) {
         ctx.run_interval(self.dur, |act, ctx| {
             println!("Timer tick");

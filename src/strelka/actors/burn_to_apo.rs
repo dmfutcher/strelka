@@ -24,7 +24,7 @@ impl BurnToApoActor {
 
 impl StreamActor for BurnToApoActor {
 
-    fn name(&self) -> &'static str { "Burn to apoapsis" }
+    fn name(&self) -> &'static str { "BurnToApoapsis" }
 
     fn request_streams(&self) -> Vec<&'static str> {
         vec!("Apoapsis")
@@ -38,7 +38,8 @@ impl StreamActor for BurnToApoActor {
                     self.cmd.do_send(Command::SetThrottle(0.0));
                     info!("MECO confirmed");
 
-                    // TODO: Start working out circularisation burn
+                    // TODO: Launch circularisation burn handler
+                    return StreamResponse::Stop;
                 }
             },
             _ => {}

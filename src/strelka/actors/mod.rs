@@ -5,6 +5,7 @@ pub mod controller;
 pub mod gravity_turn;
 pub mod ignition;
 pub mod streamer;
+pub mod spawner;
 
 use actix::prelude::*;
 use crate::strelka::streams::StreamUpdate;
@@ -18,7 +19,7 @@ pub enum StreamResponse {
     Stop,
 }
 
-pub trait StreamActor {
+pub trait StreamActor: Send {
     fn name(&self) -> &'static str;
     fn request_streams(&self) -> Vec<&'static str>;
     fn receive(&mut self, msg: StreamUpdate) -> StreamResponse;
@@ -41,3 +42,5 @@ impl Handler<StreamUpdate> for Box<dyn StreamActor> {
         };
     }
 }
+
+// unsafe impl Send for StreamActor {}

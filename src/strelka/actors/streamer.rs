@@ -56,6 +56,15 @@ impl Streamer {
  
         Ok(apo_altitude)
     }
+
+    // TODO: Could share orbit if we need to limit RPC call count
+    fn get_time_to_apoapsis(&self) -> Result<f64, failure::Error> {
+        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
+        let orbit = self.client.mk_call(&vessel.get_orbit())?;
+        let apo_time = self.client.mk_call(&orbit.get_time_to_apoapsis())?;
+ 
+        Ok(apo_time)
+    }
 }
 
 impl Actor for Streamer {
@@ -109,11 +118,18 @@ impl Handler<StreamValues> for Streamer {
                 }
             }
 
-            // Apoapsis stream
-            // KRPC does not like if we try to stream apo altitude the same way as all the other values. After the first
-            // successful request, all subsequent stream value requests fail. So get it manually!
+            // Apoapsis streams
+            // KRPC does not like if we try to stream orbit values the same way as all the other values. After the first
+            // successful request, all subsequent stream value requests fail. So we have to get orbit values manually!
+
+            // Apoapsis altitude
             if let Ok(apo_alt) = self.get_apoapsis_altitude() {
                 results.push(Box::new(StreamUpdate::Apoapsis(apo_alt)));
+            }
+
+            // Time to apoapsis
+            if let Ok(apo_time) = self.get_time_to_apoapsis() {
+                results.push(Box::new(StreamUpdate::TimeToApoapsis(apo_time)));
             }
         }
 

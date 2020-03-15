@@ -1,23 +1,24 @@
 use actix::prelude::*;
 
-use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
 use std::boxed::Box;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
-use crate::strelka::actors::{StreamActor, StreamUpdate};
+use crate::strelka::actors::StreamUpdate;
 use crate::strelka::actors::command::CommandActor;
 use crate::strelka::actors::streamer::{Streamer, StreamValues};
+use crate::strelka::actors::spawner::{Spawner, SpawnerCommand, StreamAddrs};
 use crate::strelka::actors::altitude::AltitudeActor;
 use crate::strelka::actors::ignition::IgnitionActor;
 use crate::strelka::actors::gravity_turn::GravityTurnActor;
-use crate::strelka::actors::burn_to_apo::BurnToApoActor;
 
 pub struct ActorController {
-    actors: Vec<actix::Addr<Box<dyn StreamActor>>>,
-    stream_map: HashMap<String, Vec<actix::Addr<Box<dyn StreamActor>>>>,
     cmd_actor: actix::Addr<CommandActor>,
     stream_actor: actix::Addr<Streamer>,
+    spawner: Addr<Spawner>,
+    stream_addrs: StreamAddrs,
 }
 
 // Ideally we'd put all the logic in here into its own Actor inside the system; however there are
@@ -25,29 +26,20 @@ pub struct ActorController {
 impl ActorController {
 
     pub fn new(krpc_client: krpc_mars::RPCClient, stream_client: krpc_mars::StreamClient) -> Self {
-        ActorController{ 
-            actors: vec!(),
-            stream_map: HashMap::new(),
+        let stream_addrs = Arc::new(Mutex::new(HashMap::new()));
+
+        ActorController{
             cmd_actor: CommandActor::new(krpc_client.clone()).start(),
             stream_actor: Streamer::new(krpc_client, stream_client).start(),
-        }
-    }
-
-    pub fn register_actor(&mut self, actor: Box<dyn StreamActor>) {
-        debug!("Registering actor {}", &actor.name());
-
-        let linked_streams = actor.request_streams();
-        let address = actor.start();
-        self.actors.push(address.clone());
-
-        for stream_name in linked_streams {
-            let addrs = self.stream_map.entry(stream_name.to_string()).or_insert(vec!());
-            addrs.push(address.clone());
+            spawner: Spawner::new(stream_addrs.clone()).start(),
+            stream_addrs,
         }
     }
 
     pub async fn broadcast_stream_update(&self, update: StreamUpdate) {
-        match self.stream_map.get(&update.to_string()) {
+        let stream_addrs = self.stream_addrs.lock().unwrap();
+
+        match stream_addrs.get(&update.to_string()) {
             Some(actors) => {
                 for a in actors {
                     match (*a).send(update).await {
@@ -76,19 +68,22 @@ impl ActorController {
             }
         }
 
+        // TODO: We'll want to make this sleep smaller so we can react faster to streams.
+        //       However the countdown relies on ticks being a second, so we need the timer
+        //       actor infx to work before we can do this. 
         thread::sleep(Duration::from_secs(1));
     }
 
     pub async fn start(&mut self) {
-        self.register_actor(Box::new(AltitudeActor::new()));
-        self.register_actor(Box::new(GravityTurnActor::new(self.cmd_actor.clone())));
-        self.register_actor(Box::new(IgnitionActor::new(self.cmd_actor.clone())));
+        self.spawner.do_send(SpawnerCommand::Spawn(Box::new(AltitudeActor::new())));
+        self.spawner.do_send(SpawnerCommand::Spawn(Box::new(GravityTurnActor::new(self.cmd_actor.clone()))));
+        self.spawner.do_send(SpawnerCommand::Spawn(Box::new(IgnitionActor::new(self.cmd_actor.clone()))));
 
-        // TODO: Very soon going to want the ability for actors to spawn new actors
-        // This one can run fine from the start, but it doesn't need to and that increases
-        // the number of concurrent moving parts and more surface area for actors to 
-        // interact and break in ways you don't expect.
-        self.register_actor(Box::new(BurnToApoActor::new(self.cmd_actor.clone())));
+        // // TODO: Very soon going to want the ability for actors to spawn new actors
+        // // This one can run fine from the start, but it doesn't need to and that increases
+        // // the number of concurrent moving parts and more surface area for actors to 
+        // // interact and break in ways you don't expect.
+        // self.register_actor(Box::new(BurnToApoActor::new(self.cmd_actor.clone())));
     }
     
     // pub async fn stop_actors(&self) {

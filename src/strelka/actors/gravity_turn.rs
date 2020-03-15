@@ -2,12 +2,16 @@ use actix::prelude::{Actor, Addr, Context};
 
 use crate::strelka::actors::{StreamActor, StreamResponse};
 use crate::strelka::actors::command::{Command, CommandActor};
+use crate::strelka::actors::spawner::{Spawner, SpawnerCommand};
+use crate::strelka::actors::burn_to_apo::BurnToApoActor;
 use crate::strelka::streams::StreamUpdate;
 
 pub struct GravityTurnActor {
     cmd: Addr<CommandActor>,
+    spawn: Addr<Spawner>,
 
     started: bool,
+    finished: bool,
     desired_pitch: f64,
 }
 
@@ -17,21 +21,31 @@ impl Actor for GravityTurnActor {
 
 impl GravityTurnActor {
 
-    pub fn new(cmd: Addr<CommandActor>) -> Self {
-        GravityTurnActor{ cmd, started: false, desired_pitch: 50.0 }
+    pub fn new(cmd: Addr<CommandActor>, spawn: Addr<Spawner>) -> Self {
+        GravityTurnActor{ 
+            cmd,
+            spawn,
+            started: false, 
+            finished: false,
+            desired_pitch: 50.0
+        }
     }
 
 }
 
 impl StreamActor for GravityTurnActor {
 
-    fn name(&self) -> &'static str { "GravityTurn" }
+    fn name(&self) -> &'static str { "Gravity Turn" }
 
     fn request_streams(&self) -> Vec<&'static str> {
         vec!("Pitch", "Altitude")
     }
 
     fn receive(&mut self, update: StreamUpdate) -> StreamResponse {
+        if self.finished {
+            return StreamResponse::Stop;
+        }
+
         match update {
             StreamUpdate::Altitude(altitude) => {
                 if altitude > 250.0 && !self.started {
@@ -46,10 +60,14 @@ impl StreamActor for GravityTurnActor {
                 if self.started {
                     let within_low = 0.9 * self.desired_pitch;
                     let within_high = 1.1 * self.desired_pitch;
-                    if current_pitch >= within_low && current_pitch <= within_high {
+
+                    if current_pitch >= within_low && current_pitch <= within_high && !self.finished {
+                        self.finished = true;
                         info!("Gravity turn finished");
                         self.cmd.do_send(Command::SetPitch(0.0));
-                        return StreamResponse::Stop;
+
+                        // Spawn the BurnToApo actor and stop our own actor
+                        self.spawn.do_send(SpawnerCommand::Spawn(Box::new(BurnToApoActor::new(self.cmd.clone()))));
                     }
         
                     // TODO: Implement gradual pitch control level increasing over time to reduce chance of losing control

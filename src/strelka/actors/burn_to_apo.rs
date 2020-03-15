@@ -24,10 +24,14 @@ impl BurnToApoActor {
 
 impl StreamActor for BurnToApoActor {
 
-    fn name(&self) -> &'static str { "BurnToApoapsis" }
+    fn name(&self) -> &'static str { "Burn to Aapoapsis" }
 
     fn request_streams(&self) -> Vec<&'static str> {
         vec!("Apoapsis")
+    }
+
+    fn on_start(&self) {
+        info!("Waiting for apoapsis outside atmosphere");
     }
 
     fn receive(&mut self, update: StreamUpdate) -> StreamResponse {

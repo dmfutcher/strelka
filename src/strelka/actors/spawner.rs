@@ -23,7 +23,7 @@ impl Spawner {
     }
 
     fn handle_spawn(&mut self, actor: Box<dyn StreamActor>) {
-        debug!("Registering actor {}", &actor.name());
+        info!("Starting {} program", &actor.name());
         let linked_streams = actor.request_streams();
         let address = actor.start();
 

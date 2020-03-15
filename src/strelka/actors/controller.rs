@@ -39,7 +39,12 @@ impl ActorController {
     pub async fn broadcast_stream_update(&self, update: StreamUpdate) {
         let stream_addrs = self.stream_addrs.lock().unwrap();
 
-        match stream_addrs.get(&update.to_string()) {
+        // In response to stream updates, actors can call the Spawner to create new actors. That requires
+        // the lock on stream_addrs, so make a clone and unlock the mutex so we don't hang on new actor create.
+        let addrs_copy = stream_addrs.clone();
+        drop(stream_addrs);
+
+        match addrs_copy.get(&update.to_string()) {
             Some(actors) => {
                 for a in actors {
                     match (*a).send(update).await {
@@ -76,14 +81,8 @@ impl ActorController {
 
     pub async fn start(&mut self) {
         self.spawner.do_send(SpawnerCommand::Spawn(Box::new(AltitudeActor::new())));
-        self.spawner.do_send(SpawnerCommand::Spawn(Box::new(GravityTurnActor::new(self.cmd_actor.clone()))));
+        self.spawner.do_send(SpawnerCommand::Spawn(Box::new(GravityTurnActor::new(self.cmd_actor.clone(), self.spawner.clone()))));
         self.spawner.do_send(SpawnerCommand::Spawn(Box::new(IgnitionActor::new(self.cmd_actor.clone()))));
-
-        // // TODO: Very soon going to want the ability for actors to spawn new actors
-        // // This one can run fine from the start, but it doesn't need to and that increases
-        // // the number of concurrent moving parts and more surface area for actors to 
-        // // interact and break in ways you don't expect.
-        // self.register_actor(Box::new(BurnToApoActor::new(self.cmd_actor.clone())));
     }
     
     // pub async fn stop_actors(&self) {

@@ -23,10 +23,15 @@ pub trait StreamActor: Send {
     fn name(&self) -> &'static str;
     fn request_streams(&self) -> Vec<&'static str>;
     fn receive(&mut self, msg: StreamUpdate) -> StreamResponse;
+    fn on_start(&self) {}
 }
 
 impl Actor for Box<dyn StreamActor> {
     type Context = Context<Self>;
+
+    fn started(&mut self, _: &mut Context<Self>) {
+        self.on_start();
+    }
 }
 
 impl Handler<StreamUpdate> for Box<dyn StreamActor> {

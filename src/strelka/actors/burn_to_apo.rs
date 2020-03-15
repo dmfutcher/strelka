@@ -28,7 +28,7 @@ impl StreamActor for GravityTurnActor {
     fn name(&self) -> &'static str { "Gravity turn" }
 
     fn request_streams(&self) -> Vec<&'static str> {
-        vec!("Pitch", "Altitude")
+        vec!("Altitude")
     }
 
     fn receive(&mut self, update: StreamUpdate) -> StreamResponse {
@@ -44,7 +44,6 @@ impl StreamActor for GravityTurnActor {
                     let within_low = 0.9 * self.desired_pitch;
                     let within_high = 1.1 * self.desired_pitch;
                     if current_pitch >= within_low && current_pitch <= within_high {
-                        info!("Gravity turn finished");
                         self.cmd.do_send(Command::SetPitch(0.0));
                         return StreamResponse::Stop;
                     }

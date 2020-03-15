@@ -8,8 +8,10 @@ pub enum StreamUpdate {
     Altitude(f64),
     UniversalTime(f64),
     Pitch(f64),
+    Apoapsis(f64),
 }
 
+// TODO: If we don't want to keep maintaining this list, could drop strum back in
 impl ToString for StreamUpdate {
 
     fn to_string(&self) -> String {
@@ -17,6 +19,7 @@ impl ToString for StreamUpdate {
             StreamUpdate::Altitude(_) => "Altitude",
             StreamUpdate::UniversalTime(_) => "UniversalTime",
             StreamUpdate::Pitch(_) => "Pitch",
+            StreamUpdate::Apoapsis(_) => "Apoapsis",
         }.to_owned()
     }
 

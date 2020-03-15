@@ -12,6 +12,7 @@ pub struct Streamer {
     ut: Option<krpc_mars::StreamHandle<f64>>,
     alt: Option<krpc_mars::StreamHandle<f64>>,
     direction: Option<krpc_mars::StreamHandle<(f64, f64, f64)>>,
+    apoapsis: Option<krpc_mars::StreamHandle<f64>>,
 }
 
 impl Streamer {
@@ -21,7 +22,8 @@ impl Streamer {
             stream_client,
             ut: None, 
             alt: None,
-            direction: None
+            direction: None,
+            apoapsis: None,
         };
 
         if let Err(e) = streamer.initialise_streams() {
@@ -37,14 +39,17 @@ impl Streamer {
         let bodies = self.client.mk_call(&space_center::get_bodies())?;
         let kerbin_ref = self.client.mk_call(&bodies.get("Kerbin").unwrap().get_reference_frame())?; // TODO: Temporary hard-code to Kerbin
         let flight = self.client.mk_call(&vessel.flight(&kerbin_ref))?;
+        let orbit = self.client.mk_call(&vessel.get_orbit())?;
 
         let ut_handle = self.client.mk_call(&space_center::get_ut().to_stream())?;
         let alt_handle = self.client.mk_call(&flight.get_mean_altitude().to_stream())?;
         let dir_handle = self.client.mk_call(&flight.get_direction().to_stream())?;
+        let apo_handle = self.client.mk_call(&orbit.get_apoapsis_altitude().to_stream())?;
 
         self.ut = Some(ut_handle);
         self.alt = Some(alt_handle);
         self.direction = Some(dir_handle);
+        self.apoapsis = Some(apo_handle);
 
         Ok(())
     } 
@@ -97,6 +102,14 @@ impl Handler<StreamValues> for Streamer {
                         let pitch = if vessel_dir.x() < 0.0 { -angle } else { angle };
                         results.push(Box::new(StreamUpdate::Pitch(pitch))); 
                     },
+                    Err(_) => {}
+                }
+            }
+
+            // Apoapsis stream
+            if let Some(handle) = self.apoapsis {
+                match update.get_result(&handle) {
+                    Ok(apo) => { results.push(Box::new(StreamUpdate::Apoapsis(apo))); },
                     Err(_) => {}
                 }
             }

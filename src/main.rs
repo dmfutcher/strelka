@@ -1,5 +1,5 @@
 extern crate krpc_mars;
-extern crate failure;
+#[macro_use] extern crate failure;
 extern crate actix;
 extern crate actix_rt;
 extern crate pretty_env_logger;

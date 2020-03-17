@@ -4,6 +4,13 @@ use std::convert::From;
 use std::ops::Sub;
 
 #[derive(Debug, Copy, Clone)]
+pub struct ManoeuvreInfo {
+    pub time_to: f64,
+    pub remaining_delta_v: f64,
+    pub burn_time: f32,
+}
+
+#[derive(Debug, Copy, Clone)]
 pub enum StreamUpdate {
     Altitude(f64),
     UniversalTime(f64),
@@ -11,9 +18,9 @@ pub enum StreamUpdate {
     Apoapsis(f64),
     TimeToApoapsis(f64),
     EnginesDepleted(i16),
+    ManoeuvreInfo(ManoeuvreInfo),
 }
 
-// TODO: If we don't want to keep maintaining this list, could drop strum back in
 impl ToString for StreamUpdate {
 
     fn to_string(&self) -> String {
@@ -24,6 +31,7 @@ impl ToString for StreamUpdate {
             StreamUpdate::Apoapsis(_) => "Apoapsis",
             StreamUpdate::TimeToApoapsis(_) => "TimeToApoapsis",
             StreamUpdate::EnginesDepleted(_) => "EnginesDepleted",
+            StreamUpdate::ManoeuvreInfo(_) => "ManoeuvreInfo",
         }.to_owned()
     }
 

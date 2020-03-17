@@ -2,7 +2,7 @@ use actix::prelude::*;
 use krpc_mars::{RPCClient, StreamClient};
 
 use crate::krpc::space_center;
-use crate::strelka::streams::{StreamUpdate, Vector3};
+use crate::strelka::streams::{StreamUpdate, Vector3, ManoeuvreInfo};
 
 /// Streamer periodically gets polls and fetches values from KRPC streams
 pub struct Streamer {
@@ -84,6 +84,38 @@ impl Streamer {
 
         Ok(depleted_engines.len() as i16)
     }
+
+    fn get_manoeuvre_info(&self) -> Result<ManoeuvreInfo, failure::Error> {
+        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
+        let control = self.client.mk_call(&vessel.get_control())?;
+
+        let nodes = self.client.mk_call(&control.get_nodes())?;
+        if let Some(node) = nodes.first() {
+            let time_to = self.client.mk_call(&node.get_time_to())?;
+            let remaining_delta_v = self.client.mk_call(&node.get_remaining_delta_v())?;
+
+            // Calculate burn time
+            // XXX: This is coming out lower (~10seconds on ZIV-2 test flights) but close enough we can manage
+            let f = self.client.mk_call(&vessel.get_available_thrust())?;
+            let raw_isp = self.client.mk_call(&vessel.get_specific_impulse())?;
+            let isp = raw_isp * 9.82;
+            let m0 = self.client.mk_call(&vessel.get_mass())?;
+            let m1 = m0 / (remaining_delta_v as f32 / isp).exp();
+            let flow = f / isp;
+            let burn_time = (m0 - m1) / flow;
+
+            trace!("f = {}", f);
+            trace!("isp = {}", isp);
+            trace!("m0 = {}", m0);
+            trace!("m1 = {}", m1);
+            trace!("flow = {}", flow);
+            trace!("burn time = {}", burn_time);
+
+            return Ok(ManoeuvreInfo{ time_to, remaining_delta_v, burn_time });
+        }
+
+        Err(format_err!("No nodes (this is fine)"))
+    }
 }
 
 impl Actor for Streamer {
@@ -154,6 +186,11 @@ impl Handler<StreamValues> for Streamer {
             // Depleted engines count
             if let Ok(depleted_engines) = self.get_depleted_engine_count() {
                 results.push(Box::new(StreamUpdate::EnginesDepleted(depleted_engines)));
+            }
+
+            // Manoeuvre node info
+            if let Ok(manoevre_info) = self.get_manoeuvre_info() {
+                results.push(Box::new(StreamUpdate::ManoeuvreInfo(manoevre_info)));
             }
         }
 

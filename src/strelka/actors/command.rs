@@ -10,6 +10,7 @@ pub enum Command {
     Stage,
     SetPitch(f32),
     SetSAS(bool),
+    SetSASMode(space_center::SASMode),
     SetRCS(bool),
     SetThrottle(f32),
     CreateOrbitNode(f64),
@@ -46,6 +47,12 @@ impl CommandActor {
         })
     }
 
+    fn handle_cmd_set_sas_mode(&self, mode: space_center::SASMode) -> Result<(), failure::Error> {
+        self.with_control(|ctl| { 
+            self.client.mk_call(&ctl.set_sas_mode(mode))
+        })
+    }
+
     fn handle_cmd_set_rcs(&self, toggle: bool) -> Result<(), failure::Error> {
         self.with_control(|ctl| { 
             self.client.mk_call(&ctl.set_rcs(toggle))
@@ -72,20 +79,31 @@ impl CommandActor {
             let body = self.client.mk_call(&orbit.get_body())?;
             let ut = self.client.mk_call(&space_center::get_ut())?;
             let time_to_apo = self.client.mk_call(&orbit.get_time_to_apoapsis())?;
-            let bodies = self.client.mk_call(&space_center::get_bodies())?;
-            let kerbin_ref = self.client.mk_call(&bodies.get("Kerbin").unwrap().get_reference_frame())?; // TODO: Temporary hard-code to Kerbin
+            let kerbin_ref = self.client.mk_call(&body.get_reference_frame())?;
             let flight = self.client.mk_call(&vessel.flight(&kerbin_ref))?;
 
-            let mu = self.client.mk_call(&body.get_gravitational_parameter())?;
-            let r = apo_alt as f32;
+            let mu = self.client.mk_call(&body.get_gravitational_parameter())? as f64;
+            let r = apo_alt;
+            let a1 = self.client.mk_call(&orbit.get_semi_major_axis())?;
             let a2 = r;
-            let a1 = self.client.mk_call(&orbit.get_semi_major_axis())? as f32;
             let v1 = (mu * ((2.0 / r) - (1.0 / a1))).sqrt();
             let v2 = (mu * ((2.0 / r) - (1.0 / a2))).sqrt();
-            let delta_v = -(v2 - v1);
-            let current_v = self.client.mk_call(&flight.get_speed())? as f32;
 
-            self.client.mk_call(&control.add_node(ut + time_to_apo, delta_v - current_v, 0.0, 0.0))?;
+            // XXX: This calculation is consistently coming out rougly 100m/s short every time 
+            //      I've stared long enough I'm just going to fudge it for now.
+            let delta_v = -(v2 - v1) + 100.0; 
+            
+            trace!("apo_alt = {}", apo_alt);
+            trace!("a1 = {}", a1);
+            trace!("a2 = {}", a2);
+            trace!("r = {}", r);
+            trace!("mu = {}", mu);
+            trace!("v1 = {}", v1);
+            trace!("v2 = {}", v2);
+            trace!("dV = {}", delta_v);
+
+            let current_v = self.client.mk_call(&flight.get_speed())?;
+            self.client.mk_call(&control.add_node(ut + time_to_apo, (delta_v - current_v) as f32, 0.0, 0.0))?;
             Ok(())
     }
 
@@ -119,6 +137,7 @@ impl Handler<Command> for CommandActor {
             Command::Stage => self.handle_cmd_stage(),
             Command::SetPitch(pitch_ctl_val) => self.handle_cmd_pitch(pitch_ctl_val),
             Command::SetSAS(toggle) => self.handle_cmd_set_sas(toggle),
+            Command::SetSASMode(mode) => self.handle_cmd_set_sas_mode(mode),
             Command::SetRCS(toggle) => self.handle_cmd_set_rcs(toggle),
             Command::SetThrottle(throttle_val) => self.handle_cmd_set_throttle(throttle_val),
             Command::CreateOrbitNode(apo) => self.handle_cmd_create_orbit_node(apo),

@@ -1,4 +1,5 @@
 use actix::prelude::{Actor, Addr, Context};
+use crate::krpc::space_center;
 
 use crate::strelka::actors::{StreamActor, StreamResponse};
 use crate::strelka::actors::command::{Command, CommandActor};
@@ -43,6 +44,7 @@ impl StreamActor for IgnitionActor {
             // TODO: This should probably live in its own actor
             self.cmd.do_send(Command::SetRCS(true));
             self.cmd.do_send(Command::SetSAS(true));
+            self.cmd.do_send(Command::SetSASMode(space_center::SASMode::StabilityAssist));
             self.cmd.do_send(Command::SetThrottle(100.0));
         } 
         

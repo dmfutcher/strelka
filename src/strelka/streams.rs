@@ -10,6 +10,7 @@ pub enum StreamUpdate {
     Pitch(f64),
     Apoapsis(f64),
     TimeToApoapsis(f64),
+    EnginesDepleted(i16),
 }
 
 // TODO: If we don't want to keep maintaining this list, could drop strum back in
@@ -22,6 +23,7 @@ impl ToString for StreamUpdate {
             StreamUpdate::Pitch(_) => "Pitch",
             StreamUpdate::Apoapsis(_) => "Apoapsis",
             StreamUpdate::TimeToApoapsis(_) => "TimeToApoapsis",
+            StreamUpdate::EnginesDepleted(_) => "EnginesDepleted",
         }.to_owned()
     }
 

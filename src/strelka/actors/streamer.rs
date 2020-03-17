@@ -65,6 +65,26 @@ impl Streamer {
  
         Ok(apo_time)
     }
+
+    // Get the number of fuel-depleted engines in the current stage. 
+    fn get_depleted_engine_count(&self) -> Result<i16, failure::Error> {
+        let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
+        let control = self.client.mk_call(&vessel.get_control())?;
+        let stage_no = self.client.mk_call(&control.get_current_stage())?;
+        let parts = self.client.mk_call(&vessel.get_parts())?;
+        let stage_parts = self.client.mk_call(&parts.in_stage(stage_no))?;
+
+        let mut depleted_engines = vec!();
+        for part in stage_parts {
+            let engine = self.client.mk_call(&part.get_engine())?;
+            let has_fuel = self.client.mk_call(&engine.get_has_fuel())?;
+            if !has_fuel {
+                depleted_engines.push(engine);
+            }
+        }
+
+        Ok(depleted_engines.len() as i16)
+    }
 }
 
 impl Actor for Streamer {
@@ -130,6 +150,11 @@ impl Handler<StreamValues> for Streamer {
             // Time to apoapsis
             if let Ok(apo_time) = self.get_time_to_apoapsis() {
                 results.push(Box::new(StreamUpdate::TimeToApoapsis(apo_time)));
+            }
+
+            // Depleted engines count
+            if let Ok(depleted_engines) = self.get_depleted_engine_count() {
+                results.push(Box::new(StreamUpdate::EnginesDepleted(depleted_engines)));
             }
         }
 

@@ -5,6 +5,7 @@ pub mod command;
 pub mod controller;
 pub mod gravity_turn;
 pub mod ignition;
+pub mod stager;
 pub mod streamer;
 pub mod spawner;
 

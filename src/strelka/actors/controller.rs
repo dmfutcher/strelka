@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 use crate::strelka::actors::StreamUpdate;
 use crate::strelka::actors::command::CommandActor;
+use crate::strelka::actors::stager::StageActor;
 use crate::strelka::actors::streamer::{Streamer, StreamValues};
 use crate::strelka::actors::spawner::{Spawner, SpawnerCommand, StreamAddrs};
 use crate::strelka::actors::altitude::AltitudeActor;
@@ -76,13 +77,14 @@ impl ActorController {
         // TODO: We'll want to make this sleep smaller so we can react faster to streams.
         //       However the countdown relies on ticks being a second, so we need the timer
         //       actor infx to work before we can do this. 
-        thread::sleep(Duration::from_millis(250));
+        thread::sleep(Duration::from_millis(1000));
     }
 
     pub async fn start(&mut self) {
         self.spawner.do_send(SpawnerCommand::Spawn(Box::new(AltitudeActor::new())));
         self.spawner.do_send(SpawnerCommand::Spawn(Box::new(GravityTurnActor::new(self.cmd_actor.clone(), self.spawner.clone()))));
         self.spawner.do_send(SpawnerCommand::Spawn(Box::new(IgnitionActor::new(self.cmd_actor.clone()))));
+        self.spawner.do_send(SpawnerCommand::Spawn(Box::new(StageActor::new(self.cmd_actor.clone()))));
     }
     
     // pub async fn stop_actors(&self) {

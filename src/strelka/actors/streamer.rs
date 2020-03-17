@@ -57,7 +57,6 @@ impl Streamer {
         Ok(apo_altitude)
     }
 
-    // TODO: Could share orbit if we need to limit RPC call count
     fn get_time_to_apoapsis(&self) -> Result<f64, failure::Error> {
         let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
         let orbit = self.client.mk_call(&vessel.get_orbit())?;
@@ -66,7 +65,7 @@ impl Streamer {
         Ok(apo_time)
     }
 
-    // Get the number of fuel-depleted engines in the current stage. 
+    // Get the number of fuel-depleted engines in the current stage
     fn get_depleted_engine_count(&self) -> Result<i16, failure::Error> {
         let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
         let control = self.client.mk_call(&vessel.get_control())?;

@@ -12,6 +12,7 @@ pub enum Command {
     SetSAS(bool),
     SetRCS(bool),
     SetThrottle(f32),
+    CreateOrbitNode(f64),
 }
 
 /// CommandActor takes ActorCommands, translates them into kRPC calls and executes those calls.
@@ -57,6 +58,37 @@ impl CommandActor {
         })
     }
 
+    fn handle_cmd_create_orbit_node(&self, apo_alt: f64) -> Result<(), failure::Error> {
+            //  XXX: TODO: etc. 
+            // Here we hit a point where the stream abstraction starts to fall apart a bit. We need the body
+            // we're orbiting's gravitational parameter and the orbit's semi_major axis, as well as our time
+            // to apoapse and apo altitude all at the same time.
+            // 
+            // I'd love to do this calculation inside the burn to apo actor & putting it here feels like a 
+            // bit of a cop-out. However, I wanna make it to orbit today, so here we go ...
+            let vessel = self.client.mk_call(&space_center::get_active_vessel())?;
+            let control = self.client.mk_call(&vessel.get_control())?;
+            let orbit = self.client.mk_call(&vessel.get_orbit())?;
+            let body = self.client.mk_call(&orbit.get_body())?;
+            let ut = self.client.mk_call(&space_center::get_ut())?;
+            let time_to_apo = self.client.mk_call(&orbit.get_time_to_apoapsis())?;
+            let bodies = self.client.mk_call(&space_center::get_bodies())?;
+            let kerbin_ref = self.client.mk_call(&bodies.get("Kerbin").unwrap().get_reference_frame())?; // TODO: Temporary hard-code to Kerbin
+            let flight = self.client.mk_call(&vessel.flight(&kerbin_ref))?;
+
+            let mu = self.client.mk_call(&body.get_gravitational_parameter())?;
+            let r = apo_alt as f32;
+            let a2 = r;
+            let a1 = self.client.mk_call(&orbit.get_semi_major_axis())? as f32;
+            let v1 = (mu * ((2.0 / r) - (1.0 / a1))).sqrt();
+            let v2 = (mu * ((2.0 / r) - (1.0 / a2))).sqrt();
+            let delta_v = -(v2 - v1);
+            let current_v = self.client.mk_call(&flight.get_speed())? as f32;
+
+            self.client.mk_call(&control.add_node(ut + time_to_apo, delta_v - current_v, 0.0, 0.0))?;
+            Ok(())
+    }
+
     // Get the controls struct, unwrap it safely, then run the given function with the controls struct,
     // avoiding duplicated krpc boilerplate wherever possible.
     fn with_control<F>(&self, f: F) -> Result<(), failure::Error>
@@ -88,7 +120,8 @@ impl Handler<Command> for CommandActor {
             Command::SetPitch(pitch_ctl_val) => self.handle_cmd_pitch(pitch_ctl_val),
             Command::SetSAS(toggle) => self.handle_cmd_set_sas(toggle),
             Command::SetRCS(toggle) => self.handle_cmd_set_rcs(toggle),
-            Command::SetThrottle(throttle_val) => self.handle_cmd_set_throttle(throttle_val)
+            Command::SetThrottle(throttle_val) => self.handle_cmd_set_throttle(throttle_val),
+            Command::CreateOrbitNode(apo) => self.handle_cmd_create_orbit_node(apo),
         };
 
         if let Err(e) = result {

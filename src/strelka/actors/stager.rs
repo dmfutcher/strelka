@@ -33,7 +33,6 @@ impl StreamActor for StageActor {
     fn receive(&mut self, update: StreamUpdate) -> StreamResponse {
         if let StreamUpdate::EnginesDepleted(count) = update {
             if count > 0 {
-                // TODO: Do we need a cooldown timer?
                 self.cmd.do_send(Command::Stage);
             }
         }
